@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Any
 
+from .constants import VALID_CATEGORIES
+
 # Setup logging
 logger = logging.getLogger(__name__)
 
@@ -83,9 +85,8 @@ def validate_rule_metadata(rule_code: int, metadata: Dict[str, Any]) -> None:
 
     # Validate category
     category = metadata["category"]
-    valid_categories = {"C1", "C2", "C3", "C4"}
-    if not isinstance(category, str) or category not in valid_categories:
-        raise ValueError(f"category must be one of {valid_categories} for rule code {rule_code}")
+    if not isinstance(category, str) or category not in VALID_CATEGORIES:
+        raise ValueError(f"category must be one of {VALID_CATEGORIES} for rule code {rule_code}")
 
 
 def load_rule_metadata(json_file_path: str) -> Dict[int, RuleMetadata]:

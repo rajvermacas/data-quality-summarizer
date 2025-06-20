@@ -18,6 +18,7 @@ from data_quality_summarizer.rules import (
     validate_rule_metadata,
     enrich_with_rule_metadata,
 )
+from data_quality_summarizer.constants import VALID_CATEGORIES
 
 
 class TestRuleMetadata:
@@ -277,9 +278,7 @@ class TestRuleMetadataValidation:
 
     def test_validate_rule_metadata_valid_all_categories(self):
         """Test validation passes for all valid string categories."""
-        valid_categories = ["C1", "C2", "C3", "C4"]
-        
-        for category in valid_categories:
+        for category in VALID_CATEGORIES:
             metadata = {
                 "rule_name": "TEST_RULE",
                 "rule_type": "DATASET",
