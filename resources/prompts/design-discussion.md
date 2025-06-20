@@ -92,6 +92,6 @@ Note: You will need to use the results column in the input sample to calculate t
 This is just a schema. I am not sure whether such a csv will be a good input for the LLM or should we transform it into a form which can be used by the LLM very efficiently like using all the above data and creating a plain text template and inject the values in that text template. You tell me what should be a good approach.
 
 
-DO NOT WRITE ANY CODE. Just discuss with me the design. Once we both agree on the design you can create a markdown PRD and save it in the resource folder under prd.
+DO NOT WRITE ANY CODE. Just discuss with me the design. Once we both agree on the design you can create a markdown PRD and save it in the resources folder under prd.
 
 Give me suggestions on how to have a more improved approach for the solution.

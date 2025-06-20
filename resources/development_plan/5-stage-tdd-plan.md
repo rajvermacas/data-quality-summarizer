@@ -158,7 +158,7 @@ Keyed by `rule_code`, provides:
 - `src/summarizer.py` - CSV and NL generation
 - Full summary CSV with all 27 columns as per schema
 - Natural language sentence generation per template
-- File output to `resource/artifacts/` directory
+- File output to `resources/artifacts/` directory
 - Proper formatting and encoding (UTF-8)
 
 ### Acceptance Criteria:
@@ -181,8 +181,8 @@ Keyed by `rule_code`, provides:
 ### CLI Interface Schema:
 - Input: CSV file path (raw data quality results)
 - Input: Rule metadata JSON file path
-- Output: `resource/artifacts/full_summary.csv`
-- Output: `resource/artifacts/nl_all_rows.txt`
+- Output: `resources/artifacts/full_summary.csv`
+- Output: `resources/artifacts/nl_all_rows.txt`
 
 ### Performance Requirements:
 - Runtime: <2 minutes for 100k rows on 4-core laptop

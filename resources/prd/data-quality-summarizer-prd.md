@@ -100,7 +100,7 @@ Total rows ≈  `(# distinct datasets) × (# distinct rule_code)`.
 | `artifacts/full_summary.csv` | CSV | Authoritative, row-oriented summary; audit & exploration |
 | `artifacts/nl_all_rows.txt` | UTF-8 text | LLM-friendly prompt sentences (one per CSV row) |
 
-> Both files reside in `resource/artifacts/` (created if absent).
+> Both files reside in `resources/artifacts/` (created if absent).
 
 ### NL Sentence Template (per row)
 ```
@@ -137,7 +137,7 @@ src/
   rules.py            # rule-metadata loader & utils
   summarizer.py       # CSV + NL generation
   __main__.py         # CLI entry point
-resource/
+resources/
   artifacts/          # full_summary.csv, nl_all_rows.txt
   prd/                # this PRD
   prompts/            # design discussion etc.

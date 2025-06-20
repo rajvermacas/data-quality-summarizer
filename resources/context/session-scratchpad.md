@@ -49,7 +49,7 @@
 - **Key Features**:
   - Full summary CSV with exact 27-column schema as per requirements
   - Natural language sentence generation following precise template format
-  - File output to configurable directory (`resource/artifacts/` default)
+  - File output to configurable directory (`resources/artifacts/` default)
   - UTF-8 encoding support for international characters
   - Memory-efficient processing with <2MB output file size validation
   - Comprehensive error handling and structured logging

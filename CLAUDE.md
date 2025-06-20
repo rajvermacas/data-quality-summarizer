@@ -33,8 +33,8 @@ The system implements a **streaming aggregation pipeline** with the following ke
 - `level_of_execution`, `attribute_name` - Execution context
 
 **Output Artifacts**:
-- `resource/artifacts/full_summary.csv` - 27-column structured summary
-- `resource/artifacts/nl_all_rows.txt` - Natural language sentences for LLM consumption
+- `resources/artifacts/full_summary.csv` - 27-column structured summary
+- `resources/artifacts/nl_all_rows.txt` - Natural language sentences for LLM consumption
 
 ## Development Commands
 

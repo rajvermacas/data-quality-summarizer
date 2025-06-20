@@ -71,7 +71,7 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-resource/artifacts/
+resources/artifacts/
 *.csv
 *.json
 *.log

@@ -62,8 +62,8 @@ Examples:
     parser.add_argument(
         '--output-dir',
         type=str,
-        default='resource/artifacts',
-        help='Output directory for generated artifacts (default: resource/artifacts)'
+        default='resources/artifacts',
+        help='Output directory for generated artifacts (default: resources/artifacts)'
     )
     
     return parser.parse_args()
@@ -73,7 +73,7 @@ def run_pipeline(
     csv_file: str,
     rule_metadata_file: str,
     chunk_size: int = 20000,
-    output_dir: str = 'resource/artifacts'
+    output_dir: str = 'resources/artifacts'
 ) -> Dict[str, Any]:
     """
     Execute the complete data quality summarization pipeline.
