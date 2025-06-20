@@ -31,7 +31,7 @@ class TestRuleMetadata:
             rule_type="DATASET",
             dimension="Completeness",
             rule_description="Validates row count meets expectations",
-            category=1,
+            category="C1",
         )
 
         assert rule.rule_code == 101
@@ -39,7 +39,7 @@ class TestRuleMetadata:
         assert rule.rule_type == "DATASET"
         assert rule.dimension == "Completeness"
         assert rule.rule_description == "Validates row count meets expectations"
-        assert rule.category == 1
+        assert rule.category == "C1"
 
     def test_rule_metadata_string_representation(self):
         """Test string representation of RuleMetadata."""
@@ -49,7 +49,7 @@ class TestRuleMetadata:
             rule_type="DATASET",
             dimension="Completeness",
             rule_description="Validates row count meets expectations",
-            category=1,
+            category="C1",
         )
 
         str_repr = str(rule)
@@ -69,21 +69,21 @@ class TestRuleMetadataLoading:
                 "rule_type": "DATASET",
                 "dimension": "Completeness",
                 "rule_description": "Validates row count meets expectations",
-                "category": 1,
+                "category": "C1",
             },
             "102": {
                 "rule_name": "NULL_CHECK",
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Correctness",
                 "rule_description": "Checks for null values in attributes",
-                "category": 2,
+                "category": "C2",
             },
             "103": {
                 "rule_name": "DATA_TYPE_CHECK",
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Correctness",
                 "rule_description": "Validates data types match schema",
-                "category": 1,
+                "category": "C1",
             },
         }
 
@@ -111,7 +111,7 @@ class TestRuleMetadataLoading:
         assert rule_101.rule_name == "ROW_COUNT"
         assert rule_101.rule_type == "DATASET"
         assert rule_101.dimension == "Completeness"
-        assert rule_101.category == 1
+        assert rule_101.category == "C1"
 
     def test_load_rule_metadata_file_not_found(self):
         """Test loading rule metadata when file doesn't exist."""
@@ -161,7 +161,7 @@ class TestRuleLookup:
                 rule_type="DATASET",
                 dimension="Completeness",
                 rule_description="Validates row count meets expectations",
-                category=1,
+                category="C1",
             ),
             102: RuleMetadata(
                 rule_code=102,
@@ -169,7 +169,7 @@ class TestRuleLookup:
                 rule_type="ATTRIBUTE",
                 dimension="Correctness",
                 rule_description="Checks for null values in attributes",
-                category=2,
+                category="C2",
             ),
         }
 
@@ -203,7 +203,7 @@ class TestRuleMetadataValidation:
             "rule_type": "DATASET",
             "dimension": "Completeness",
             "rule_description": "Validates row count meets expectations",
-            "category": 1,
+            "category": "C1",
         }
 
         # Should not raise any exception
@@ -215,7 +215,7 @@ class TestRuleMetadataValidation:
             "rule_type": "DATASET",
             "dimension": "Completeness",
             "rule_description": "Validates row count meets expectations",
-            "category": 1,
+            "category": "C1",
         }
 
         with pytest.raises(ValueError, match="Missing required field 'rule_name'"):
@@ -228,7 +228,7 @@ class TestRuleMetadataValidation:
             "rule_type": "",
             "dimension": "Completeness",
             "rule_description": "Validates row count meets expectations",
-            "category": 1,
+            "category": "C1",
         }
 
         with pytest.raises(
@@ -243,7 +243,7 @@ class TestRuleMetadataValidation:
             "rule_type": "BUSINESS_RULE",
             "dimension": "Accuracy",
             "rule_description": "Custom business rule validation",
-            "category": 2,
+            "category": "C2",
         }
 
         # Should not raise any exception
@@ -256,11 +256,54 @@ class TestRuleMetadataValidation:
             "rule_type": "DATASET",
             "dimension": "Completeness",
             "rule_description": "Validates row count meets expectations",
-            "category": 5,  # Invalid category (must be 1-4)
+            "category": "C5",  # Invalid category (must be C1-C4)
         }
 
-        with pytest.raises(ValueError, match="category must be between 1 and 4"):
+        with pytest.raises(ValueError, match="category must be one of"):
             validate_rule_metadata(101, metadata)
+
+    def test_validate_rule_metadata_invalid_category_integer(self):
+        """Test validation fails for integer category (old format)."""
+        metadata = {
+            "rule_name": "ROW_COUNT",
+            "rule_type": "DATASET",
+            "dimension": "Completeness",
+            "rule_description": "Validates row count meets expectations",
+            "category": 1,  # Should be string "C1", not integer
+        }
+
+        with pytest.raises(ValueError, match="category must be one of"):
+            validate_rule_metadata(101, metadata)
+
+    def test_validate_rule_metadata_valid_all_categories(self):
+        """Test validation passes for all valid string categories."""
+        valid_categories = ["C1", "C2", "C3", "C4"]
+        
+        for category in valid_categories:
+            metadata = {
+                "rule_name": "TEST_RULE",
+                "rule_type": "DATASET",
+                "dimension": "Completeness",
+                "rule_description": "Test rule description",
+                "category": category,
+            }
+            # Should not raise any exception
+            validate_rule_metadata(101, metadata)
+
+    def test_validate_rule_metadata_invalid_category_wrong_format(self):
+        """Test validation fails for wrong category string format."""
+        invalid_categories = ["1", "C5", "c1", "Category1", ""]
+        
+        for invalid_category in invalid_categories:
+            metadata = {
+                "rule_name": "TEST_RULE",
+                "rule_type": "DATASET", 
+                "dimension": "Completeness",
+                "rule_description": "Test rule description",
+                "category": invalid_category,
+            }
+            with pytest.raises(ValueError, match="category must be one of"):
+                validate_rule_metadata(101, metadata)
 
 
 class TestRuleEnrichment:
@@ -276,7 +319,7 @@ class TestRuleEnrichment:
                 rule_type="DATASET",
                 dimension="Completeness",
                 rule_description="Validates row count meets expectations",
-                category=1,
+                category="C1",
             ),
             102: RuleMetadata(
                 rule_code=102,
@@ -284,7 +327,7 @@ class TestRuleEnrichment:
                 rule_type="ATTRIBUTE",
                 dimension="Correctness",
                 rule_description="Checks for null values in attributes",
-                category=2,
+                category="C2",
             ),
         }
 
@@ -303,7 +346,7 @@ class TestRuleEnrichment:
         assert enriched["rule_type"] == "DATASET"
         assert enriched["dimension"] == "Completeness"
         assert enriched["rule_description"] == "Validates row count meets expectations"
-        assert enriched["category"] == 1
+        assert enriched["category"] == "C1"
         assert enriched["source"] == "test_system"  # Original data preserved
         assert enriched["tenant_id"] == "tenant_1"  # Original data preserved
 
@@ -350,14 +393,14 @@ class TestRuleMetadataIntegration:
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Uniqueness",
                 "rule_description": "Validates unique values in attribute",
-                "category": 3,
+                "category": "C3",
             },
             "202": {
                 "rule_name": "RANGE_CHECK",
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Correctness",
                 "rule_description": "Validates values are within expected range",
-                "category": 1,
+                "category": "C1",
             },
         }
 
@@ -376,7 +419,7 @@ class TestRuleMetadataIntegration:
 
         rule_202 = get_rule_by_code(rules_dict, 202)
         assert rule_202.rule_name == "RANGE_CHECK"
-        assert rule_202.category == 1
+        assert rule_202.category == "C1"
 
         # Test enrichment
         data = {"rule_code": 201, "value": "test"}

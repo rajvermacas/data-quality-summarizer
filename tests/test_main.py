@@ -51,14 +51,14 @@ def temp_files():
                 "rule_type": "DATASET",
                 "dimension": "Completeness",
                 "rule_description": "Check total row count",
-                "category": 1,
+                "category": "C1",
             },
             102: {
                 "rule_name": "NULL_CHECK",
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Completeness",
                 "rule_description": "Check for null values",
-                "category": 2,
+                "category": "C2",
             },
         }
         rules_file = os.path.join(temp_dir, "test_rules.json")

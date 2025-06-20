@@ -83,8 +83,9 @@ def validate_rule_metadata(rule_code: int, metadata: Dict[str, Any]) -> None:
 
     # Validate category
     category = metadata["category"]
-    if not isinstance(category, int) or not (1 <= category <= 4):
-        raise ValueError(f"category must be between 1 and 4 for rule code {rule_code}")
+    valid_categories = {"C1", "C2", "C3", "C4"}
+    if not isinstance(category, str) or category not in valid_categories:
+        raise ValueError(f"category must be one of {valid_categories} for rule code {rule_code}")
 
 
 def load_rule_metadata(json_file_path: str) -> Dict[int, RuleMetadata]:
