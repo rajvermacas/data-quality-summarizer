@@ -35,7 +35,7 @@ class TestCSVIngester:
             )
             f.write(header)
             row = (
-                'system1,tenant1,uuid1,dataset1,2023-01-01,1000,101,DATASET,,'
+                "system1,tenant1,uuid1,dataset1,2023-01-01,1000,101,DATASET,,"
                 '"{""result"":""Pass""}",ctx1,1000\n'
             )
             f.write(row)
@@ -65,11 +65,11 @@ class TestCSVIngester:
             "attribute_name,results,context_id,filtered_record_count"
         )
         row1 = (
-            'system1,tenant1,uuid1,dataset1,2023-01-01,1000,101,DATASET,,'
+            "system1,tenant1,uuid1,dataset1,2023-01-01,1000,101,DATASET,,"
             '"{""result"":""Pass""}",ctx1,1000'
         )
         row2 = (
-            'system2,tenant2,uuid2,dataset2,2023-01-02,2000,102,ATTRIBUTE,attr1,'
+            "system2,tenant2,uuid2,dataset2,2023-01-02,2000,102,ATTRIBUTE,attr1,"
             '"{""result"":""Fail""}",ctx2,1500'
         )
         csv_content = f"{header}\n{row1}\n{row2}"
@@ -113,7 +113,7 @@ class TestCSVIngester:
         # Create 25 rows of data
         for i in range(25):
             row = (
-                f'system{i},tenant{i},uuid{i},dataset{i},2023-01-{i+1:02d},'
+                f"system{i},tenant{i},uuid{i},dataset{i},2023-01-{i+1:02d},"
                 f'1000,{100+i},DATASET,,"{{\\"result\\":\\"Pass\\"}}",ctx{i},1000\n'
             )
             csv_content += row
