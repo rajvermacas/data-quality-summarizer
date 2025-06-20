@@ -122,20 +122,35 @@ class StreamingAggregator:
             logger.warning(f"Failed to parse results JSON: {results_str}. Error: {e}")
             return None
     
-    def _parse_business_date(self, date_str: str) -> Optional[date]:
+    def _parse_business_date(self, date_input) -> Optional[date]:
         """
-        Parse business_date string to date object.
+        Parse business_date input to date object.
         
         Args:
-            date_str: ISO date string (YYYY-MM-DD)
+            date_input: ISO date string (YYYY-MM-DD) or pandas Timestamp
             
         Returns:
             date object if successfully parsed, None otherwise
         """
         try:
-            return datetime.strptime(date_str, '%Y-%m-%d').date()
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to parse business_date: {date_str}. Error: {e}")
+            # Handle pandas Timestamp objects
+            if hasattr(date_input, 'date'):
+                return date_input.date()
+            
+            # Handle string dates
+            if isinstance(date_input, str):
+                return datetime.strptime(date_input, '%Y-%m-%d').date()
+            
+            # Handle datetime objects
+            if isinstance(date_input, datetime):
+                return date_input.date()
+                
+            # Unsupported type
+            logger.warning(f"Unsupported business_date type: {type(date_input)} - {date_input}")
+            return None
+            
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Failed to parse business_date: {date_input}. Error: {e}")
             return None
     
     def process_row(self, row: pd.Series):
