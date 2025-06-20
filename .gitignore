@@ -72,6 +72,4 @@ Thumbs.db
 
 # Project specific
 resources/artifacts/
-*.csv
-*.json
 *.log

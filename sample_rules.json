@@ -1,0 +1,30 @@
+{
+  "101": {
+    "rule_name": "ROW_COUNT_CHECK",
+    "rule_type": "DATASET",
+    "dimension": "Completeness",
+    "rule_description": "Validates that the dataset contains the expected number of records",
+    "category": 1
+  },
+  "102": {
+    "rule_name": "NULL_VALUE_CHECK",
+    "rule_type": "ATTRIBUTE",
+    "dimension": "Completeness",
+    "rule_description": "Checks for presence of null values in critical columns",
+    "category": 2
+  },
+  "103": {
+    "rule_name": "DATA_FRESHNESS",
+    "rule_type": "DATASET",
+    "dimension": "Timeliness",
+    "rule_description": "Ensures data is updated within acceptable time windows",
+    "category": 1
+  },
+  "104": {
+    "rule_name": "RANGE_VALIDATION",
+    "rule_type": "ATTRIBUTE",
+    "dimension": "Validity",
+    "rule_description": "Validates that numeric values fall within expected ranges",
+    "category": 3
+  }
+}
