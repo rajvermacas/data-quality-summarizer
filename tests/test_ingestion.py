@@ -9,7 +9,7 @@ import tempfile
 import os
 
 # Import will fail initially (RED phase)
-from ingestion import CSVIngester
+from data_quality_summarizer.ingestion import CSVIngester
 
 
 class TestCSVIngester:

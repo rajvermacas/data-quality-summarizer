@@ -12,7 +12,7 @@ from datetime import date
 from pathlib import Path
 
 # Import will fail initially - this is expected for RED phase
-from src.summarizer import (
+from data_quality_summarizer.summarizer import (
     SummaryGenerator,
     generate_full_summary_csv,
     generate_nl_sentences,

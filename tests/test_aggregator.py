@@ -13,7 +13,7 @@ from datetime import date
 import pandas as pd
 
 # Import will fail initially (RED phase) - driving implementation
-from src.aggregator import StreamingAggregator, AggregationMetrics
+from data_quality_summarizer.aggregator import StreamingAggregator, AggregationMetrics
 
 
 class TestStreamingAggregator:

@@ -11,7 +11,7 @@ import tempfile
 import os
 import logging
 
-from src.rules import (
+from data_quality_summarizer.rules import (
     RuleMetadata,
     load_rule_metadata,
     get_rule_by_code,

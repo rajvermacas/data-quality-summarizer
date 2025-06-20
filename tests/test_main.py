@@ -12,7 +12,7 @@ import logging
 import pandas as pd
 from unittest.mock import patch
 from io import StringIO
-from src import __main__ as main_module
+from data_quality_summarizer import __main__ as main_module
 
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
