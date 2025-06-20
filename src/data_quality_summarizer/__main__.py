@@ -107,18 +107,30 @@ def run_pipeline(
         # Stage 3: Process CSV in chunks
         logger.info("Starting chunked CSV processing...")
         rows_processed = 0
+        row_failures = 0
 
         for chunk_num, chunk in enumerate(ingester.read_csv_chunks(csv_file)):
             logger.info(f"Processing chunk {chunk_num + 1} ({len(chunk)} rows)")
 
             # Process each row in the chunk
             for _, row in chunk.iterrows():
-                aggregator.process_row(row)
+                try:
+                    aggregator.process_row(row)
+                except Exception as e:
+                    row_failures += 1
+                    logger.error(
+                        f"Failed to process row {rows_processed + 1}: {str(e)} "
+                        f"(Total failures: {row_failures})"
+                    )
+                    continue
 
             rows_processed += len(chunk)
             logger.debug(f"Processed {rows_processed} total rows")
 
-        logger.info(f"Completed processing {rows_processed} rows")
+        logger.info(
+            f"Completed processing {rows_processed} rows "
+            f"({row_failures} failures, {rows_processed - row_failures} successful)"
+        )
 
         # Stage 4: Finalize aggregation and generate metrics
         logger.info("Finalizing aggregation and calculating metrics...")
@@ -182,6 +194,7 @@ def run_pipeline(
         return {
             "success": True,
             "rows_processed": rows_processed,
+            "row_failures": row_failures,
             "unique_keys": unique_keys,
             "processing_time": processing_time,
             "memory_peak_mb": _get_memory_usage(),
@@ -243,6 +256,7 @@ def main() -> int:
         if result["success"]:
             print("\n🎉 SUCCESS: Data Quality Summarizer completed!")
             print(f"   📊 Processed: {result['rows_processed']:,} rows")
+            print(f"   ❌ Failures: {result.get('row_failures', 0):,} rows")
             print(f"   🔑 Unique keys: {result['unique_keys']:,}")
             print(f"   ⏱️  Time: {result['processing_time']:.2f} seconds")
             print(f"   💾 Memory peak: {result.get('memory_peak_mb', 0):.1f} MB")
