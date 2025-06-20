@@ -9,11 +9,8 @@ Tests cover:
 - Trend computation
 """
 
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date
 import pandas as pd
-from unittest.mock import Mock
-import json
 
 # Import will fail initially (RED phase) - driving implementation
 from src.aggregator import StreamingAggregator, AggregationMetrics
@@ -253,7 +250,6 @@ class TestStreamingAggregator:
         aggregator = StreamingAggregator()
 
         # Create metrics with known counts
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
         metrics = AggregationMetrics()
 
         # Set test values

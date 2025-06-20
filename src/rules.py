@@ -17,7 +17,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Any
-from functools import lru_cache
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -79,7 +78,8 @@ def validate_rule_metadata(rule_code: int, metadata: Dict[str, Any]) -> None:
     valid_rule_types = frozenset(["DATASET", "ATTRIBUTE"])
     if metadata["rule_type"] not in valid_rule_types:
         raise ValueError(
-            f"rule_type must be either 'DATASET' or 'ATTRIBUTE' for rule code {rule_code}"
+            "rule_type must be either 'DATASET' or 'ATTRIBUTE' for rule code "
+            f"{rule_code}"
         )
 
     # Validate category
@@ -141,7 +141,8 @@ def load_rule_metadata(json_file_path: str) -> Dict[int, RuleMetadata]:
         logger.debug(f"Loaded rule metadata: {rule}")
 
     logger.info(
-        f"Successfully loaded {len(rules_dict)} rule metadata entries from {json_file_path}"
+        f"Successfully loaded {len(rules_dict)} rule metadata entries from "
+        f"{json_file_path}"
     )
     return rules_dict
 

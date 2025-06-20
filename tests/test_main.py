@@ -10,14 +10,12 @@ import sys
 import json
 import logging
 import pandas as pd
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from io import StringIO
+from src import __main__ as main_module
 
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from src import __main__ as main_module
 
 
 @pytest.fixture

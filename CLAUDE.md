@@ -68,21 +68,6 @@ python -m pytest tests/test_ingestion.py
 open htmlcov/index.html
 ```
 
-### Code Quality
-```bash
-# Format code (black configured for line-length 88)
-black src/ tests/
-
-# Type checking (mypy configured with strict settings)
-mypy src/
-
-# Linting (flake8 configured with E203, W503 ignored)
-flake8 src/ tests/
-
-# Run all quality checks in sequence
-black src/ tests/ && flake8 src/ tests/ && mypy src/
-```
-
 ### Running the Application
 ```bash
 # Run the summarizer (fully implemented)

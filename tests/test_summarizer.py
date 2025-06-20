@@ -7,11 +7,9 @@ Following TDD: RED → GREEN → REFACTOR cycle.
 
 import pytest
 import pandas as pd
-import os
 import tempfile
-from datetime import datetime, date
+from datetime import date
 from pathlib import Path
-from unittest.mock import Mock
 
 # Import will fail initially - this is expected for RED phase
 from src.summarizer import (

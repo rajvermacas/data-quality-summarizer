@@ -9,7 +9,6 @@ import json
 import pytest
 import tempfile
 import os
-from pathlib import Path
 import logging
 
 from src.rules import (

@@ -13,7 +13,7 @@ from typing import Dict, Any
 
 # Import pipeline components
 from .ingestion import CSVIngester
-from .rules import load_rule_metadata, enrich_with_rule_metadata
+from .rules import load_rule_metadata
 from .aggregator import StreamingAggregator
 from .summarizer import SummaryGenerator
 
@@ -30,7 +30,8 @@ def setup_logging() -> None:
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments for the CLI."""
     parser = argparse.ArgumentParser(
-        description="Data Quality Summarizer - Generate summary artifacts from CSV data quality results",
+        description="Data Quality Summarizer - Generate summary artifacts from CSV"
+        " data quality results",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -240,12 +241,12 @@ def main() -> int:
         )
 
         if result["success"]:
-            print(f"\n🎉 SUCCESS: Data Quality Summarizer completed!")
+            print("\n🎉 SUCCESS: Data Quality Summarizer completed!")
             print(f"   📊 Processed: {result['rows_processed']:,} rows")
             print(f"   🔑 Unique keys: {result['unique_keys']:,}")
             print(f"   ⏱️  Time: {result['processing_time']:.2f} seconds")
             print(f"   💾 Memory peak: {result.get('memory_peak_mb', 0):.1f} MB")
-            print(f"   📁 Output files:")
+            print("   📁 Output files:")
             print(f"      • {result['output_files']['summary_csv']}")
             print(f"      • {result['output_files']['natural_language']}")
             return 0

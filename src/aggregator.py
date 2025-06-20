@@ -339,7 +339,8 @@ class StreamingAggregator:
             return
 
         logger.info(
-            f"Finalizing aggregation with latest_business_date: {self.latest_business_date}"
+            "Finalizing aggregation with latest_business_date: "
+            f"{self.latest_business_date}"
         )
 
         # Calculate rolling windows and derived metrics for each key

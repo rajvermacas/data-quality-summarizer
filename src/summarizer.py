@@ -180,7 +180,8 @@ class SummaryGenerator:
                 f'• On {business_date_latest}, dataset "{dataset_name}" '
                 f"(source: {source}, tenant: {tenant_id}, UUID: {dataset_uuid}) "
                 f'under rule "{rule_name}" [{rule_code}] '
-                f"recorded {fail_count_total} failures and {pass_count_total} passes overall "
+                f"recorded {fail_count_total} failures and {pass_count_total} passes "
+                f"overall "
                 f"(fail-rate {fail_rate_total:.2%}; 1-month {fail_rate_1m:.2%}, "
                 f"3-month {fail_rate_3m:.2%}, 12-month {fail_rate_12m:.2%}) "
                 f"— trend {trend_flag}."
