@@ -222,19 +222,32 @@ class TestRuleMetadataValidation:
             validate_rule_metadata(101, metadata)
 
     def test_validate_rule_metadata_invalid_rule_type(self):
-        """Test validation fails for invalid rule_type."""
+        """Test validation fails for invalid rule_type (empty string)."""
         metadata = {
             "rule_name": "ROW_COUNT",
-            "rule_type": "INVALID_TYPE",
+            "rule_type": "",
             "dimension": "Completeness",
             "rule_description": "Validates row count meets expectations",
             "category": 1,
         }
 
         with pytest.raises(
-            ValueError, match="rule_type must be either 'DATASET' or 'ATTRIBUTE'"
+            ValueError, match="rule_type must be a non-empty string"
         ):
             validate_rule_metadata(101, metadata)
+
+    def test_validate_rule_metadata_custom_rule_type(self):
+        """Test validation passes for custom rule_type values."""
+        metadata = {
+            "rule_name": "BUSINESS_VALIDATION",
+            "rule_type": "BUSINESS_RULE",
+            "dimension": "Accuracy",
+            "rule_description": "Custom business rule validation",
+            "category": 2,
+        }
+
+        # Should not raise any exception
+        validate_rule_metadata(105, metadata)
 
     def test_validate_rule_metadata_invalid_category(self):
         """Test validation fails for invalid category."""

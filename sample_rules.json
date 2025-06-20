@@ -26,5 +26,19 @@
     "dimension": "Validity",
     "rule_description": "Validates that numeric values fall within expected ranges",
     "category": 3
+  },
+  "105": {
+    "rule_name": "BUSINESS_VALIDATION",
+    "rule_type": "BUSINESS_RULE",
+    "dimension": "Accuracy",
+    "rule_description": "Custom business logic validation",
+    "category": 2
+  },
+  "106": {
+    "rule_name": "SYSTEM_CHECK",
+    "rule_type": "SYSTEM",
+    "dimension": "Reliability",
+    "rule_description": "System-level data consistency checks",
+    "category": 4
   }
 }

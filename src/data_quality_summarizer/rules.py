@@ -30,7 +30,7 @@ class RuleMetadata:
     Attributes:
         rule_code: Unique identifier for the rule
         rule_name: Human-readable rule name (e.g., "ROW_COUNT")
-        rule_type: Type of rule ("DATASET" or "ATTRIBUTE")
+        rule_type: Type of rule (e.g., "DATASET", "ATTRIBUTE", "BUSINESS_RULE")
         dimension: Quality dimension (e.g., "Completeness", "Correctness")
         rule_description: Detailed description of what the rule validates
         category: Rule category (1-4)
@@ -74,12 +74,11 @@ def validate_rule_metadata(rule_code: int, metadata: Dict[str, Any]) -> None:
                 f"Missing required field '{field}' for rule code {rule_code}"
             )
 
-    # Validate rule_type
-    valid_rule_types = frozenset(["DATASET", "ATTRIBUTE"])
-    if metadata["rule_type"] not in valid_rule_types:
+    # Validate rule_type (must be a non-empty string)
+    rule_type = metadata["rule_type"]
+    if not isinstance(rule_type, str) or not rule_type.strip():
         raise ValueError(
-            "rule_type must be either 'DATASET' or 'ATTRIBUTE' for rule code "
-            f"{rule_code}"
+            f"rule_type must be a non-empty string for rule code {rule_code}"
         )
 
     # Validate category
