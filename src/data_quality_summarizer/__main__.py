@@ -29,6 +29,19 @@ def setup_logging() -> None:
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments for the CLI."""
+    # Check if first argument is a known ML command
+    import sys
+    ml_commands = ['train-model', 'predict', 'batch-predict']
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ml_commands:
+        # Use subcommand parsing for ML commands
+        return parse_ml_arguments()
+    else:
+        # Use original parsing for backward compatibility
+        return parse_original_arguments()
+
+def parse_original_arguments() -> argparse.Namespace:
+    """Parse arguments for original summarizer functionality."""
     parser = argparse.ArgumentParser(
         description="Data Quality Summarizer - Generate summary artifacts from CSV"
         " data quality results",
@@ -62,6 +75,47 @@ Examples:
         default="resources/artifacts",
         help="Output directory for generated artifacts (default: resources/artifacts)",
     )
+
+    args = parser.parse_args()
+    args.command = 'summarize'  # Set default command for backward compatibility
+    return args
+
+def parse_ml_arguments() -> argparse.Namespace:
+    """Parse arguments for ML functionality."""
+    parser = argparse.ArgumentParser(
+        description="Data Quality Summarizer - ML Training and Prediction",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+ML Commands:
+  train-model input.csv rules.json --output-model model.pkl
+  predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
+  batch-predict --model model.pkl --input predictions.csv --output results.csv
+        """,
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Train model command
+    train_parser = subparsers.add_parser('train-model', help='Train ML model')
+    train_parser.add_argument('csv_file', help='Input CSV file for training')
+    train_parser.add_argument('rule_metadata_file', help='Rule metadata JSON file')
+    train_parser.add_argument('--output-model', required=True, help='Output model file path')
+    train_parser.add_argument('--chunk-size', type=int, default=20000, help='Chunk size for processing')
+
+    # Predict command
+    predict_parser = subparsers.add_parser('predict', help='Make single prediction')
+    predict_parser.add_argument('--model', required=True, help='Trained model file')
+    predict_parser.add_argument('--dataset-uuid', required=True, help='Dataset UUID')
+    predict_parser.add_argument('--rule-code', required=True, help='Rule code')
+    predict_parser.add_argument('--date', required=True, help='Business date (YYYY-MM-DD)')
+    predict_parser.add_argument('--historical-data', help='Historical data CSV file')
+
+    # Batch predict command
+    batch_parser = subparsers.add_parser('batch-predict', help='Make batch predictions')
+    batch_parser.add_argument('--model', required=True, help='Trained model file')
+    batch_parser.add_argument('--input', required=True, help='Input predictions CSV file')
+    batch_parser.add_argument('--output', required=True, help='Output results CSV file')
+    batch_parser.add_argument('--historical-data', help='Historical data CSV file')
 
     return parser.parse_args()
 
@@ -228,6 +282,129 @@ def _get_memory_usage() -> float:
         return 0.0  # psutil not available
 
 
+def handle_train_model_command(args: argparse.Namespace) -> int:
+    """Handle train-model command."""
+    from .ml.pipeline import MLPipeline
+    from .rules import load_rule_metadata
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Validate input files
+        if not Path(args.csv_file).exists():
+            logger.error(f"CSV file not found: {args.csv_file}")
+            return 1
+        
+        if not Path(args.rule_metadata_file).exists():
+            logger.error(f"Rule metadata file not found: {args.rule_metadata_file}")
+            return 1
+        
+        # Load rule metadata
+        rule_metadata = load_rule_metadata(args.rule_metadata_file)
+        
+        # Train model
+        pipeline = MLPipeline()
+        result = pipeline.train_model(
+            csv_file=args.csv_file,
+            rule_metadata=rule_metadata,
+            output_model_path=args.output_model
+        )
+        
+        if result['success']:
+            print(f"\n🎉 SUCCESS: Model training completed!")
+            print(f"   ⏱️  Training time: {result['training_time']:.2f} seconds")
+            print(f"   📊 Samples trained: {result['samples_trained']:,}")
+            print(f"   📊 Samples tested: {result['samples_tested']:,}")
+            print(f"   💾 Memory peak: {result['memory_peak_mb']:.1f} MB")
+            print(f"   📁 Model saved: {result['model_path']}")
+            print(f"   📈 Evaluation metrics: {result['evaluation_metrics']}")
+            return 0
+        else:
+            print(f"\n❌ ERROR: Model training failed - {result['error']}", file=sys.stderr)
+            return 1
+            
+    except Exception as e:
+        logger.error(f"Training command failed: {e}")
+        print(f"\n💥 UNEXPECTED ERROR: {e}", file=sys.stderr)
+        return 1
+
+def handle_predict_command(args: argparse.Namespace) -> int:
+    """Handle predict command."""
+    from .ml.predictor import Predictor
+    import pandas as pd
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Validate model file
+        if not Path(args.model).exists():
+            logger.error(f"Model file not found: {args.model}")
+            return 1
+        
+        # Load historical data if provided
+        historical_data = pd.DataFrame()
+        if args.historical_data and Path(args.historical_data).exists():
+            historical_data = pd.read_csv(args.historical_data)
+        
+        # Make prediction
+        predictor = Predictor(model_path=args.model, historical_data=historical_data)
+        prediction = predictor.predict(
+            dataset_uuid=getattr(args, 'dataset_uuid', ''),
+            rule_code=getattr(args, 'rule_code', ''),  
+            business_date=args.date
+        )
+        
+        print(f"\n🎯 PREDICTION RESULT:")
+        print(f"   Dataset UUID: {getattr(args, 'dataset_uuid', '')}")
+        print(f"   Rule Code: {getattr(args, 'rule_code', '')}")
+        print(f"   Business Date: {args.date}")
+        print(f"   Predicted Pass Percentage: {prediction:.2f}%")
+        return 0
+        
+    except Exception as e:
+        logger.error(f"Prediction command failed: {e}")
+        print(f"\n💥 PREDICTION ERROR: {e}", file=sys.stderr)
+        return 1
+
+def handle_batch_predict_command(args: argparse.Namespace) -> int:
+    """Handle batch-predict command."""
+    from .ml.batch_predictor import BatchPredictor
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Validate input files
+        if not Path(args.model).exists():
+            logger.error(f"Model file not found: {args.model}")
+            return 1
+            
+        if not Path(args.input).exists():
+            logger.error(f"Input CSV file not found: {args.input}")
+            return 1
+        
+        # Process batch predictions
+        batch_predictor = BatchPredictor(model_path=args.model)
+        result = batch_predictor.process_batch_csv(
+            input_csv=args.input,
+            output_csv=args.output,
+            historical_data_csv=args.historical_data or ""
+        )
+        
+        if result['success']:
+            print(f"\n🎉 SUCCESS: Batch predictions completed!")
+            print(f"   📊 Predictions processed: {result['predictions_processed']:,}")
+            print(f"   ⏱️  Processing time: {result['processing_time']:.2f} seconds")
+            print(f"   📁 Results saved: {result['output_file']}")
+            return 0
+        else:
+            print(f"\n❌ ERROR: Batch prediction failed - {result['error']}", file=sys.stderr)
+            return 1
+            
+    except Exception as e:
+        logger.error(f"Batch prediction command failed: {e}")
+        print(f"\n💥 UNEXPECTED ERROR: {e}", file=sys.stderr)
+        return 1
+
 def main() -> int:
     """Main entry point for the CLI application."""
     setup_logging()
@@ -235,42 +412,54 @@ def main() -> int:
 
     try:
         args = parse_arguments()
+        
+        # Route to appropriate command handler
+        if args.command == 'train-model':
+            return handle_train_model_command(args)
+        elif args.command == 'predict':
+            return handle_predict_command(args)
+        elif args.command == 'batch-predict':
+            return handle_batch_predict_command(args)
+        elif args.command == 'summarize':
+            # Original summarizer functionality
+            # Validate input files exist
+            if not Path(args.csv_file).exists():
+                logger.error(f"CSV file not found: {args.csv_file}")
+                return 1
 
-        # Validate input files exist
-        if not Path(args.csv_file).exists():
-            logger.error(f"CSV file not found: {args.csv_file}")
-            return 1
+            if not Path(args.rule_metadata_file).exists():
+                logger.error(f"Rule metadata file not found: {args.rule_metadata_file}")
+                return 1
 
-        if not Path(args.rule_metadata_file).exists():
-            logger.error(f"Rule metadata file not found: {args.rule_metadata_file}")
-            return 1
+            # Execute pipeline
+            result = run_pipeline(
+                csv_file=args.csv_file,
+                rule_metadata_file=args.rule_metadata_file,
+                chunk_size=args.chunk_size,
+                output_dir=args.output_dir,
+            )
 
-        # Execute pipeline
-        result = run_pipeline(
-            csv_file=args.csv_file,
-            rule_metadata_file=args.rule_metadata_file,
-            chunk_size=args.chunk_size,
-            output_dir=args.output_dir,
-        )
-
-        if result["success"]:
-            print("\n🎉 SUCCESS: Data Quality Summarizer completed!")
-            print(f"   📊 Processed: {result['rows_processed']:,} rows")
-            print(f"   ❌ Failures: {result.get('row_failures', 0):,} rows")
-            print(f"   🔑 Unique keys: {result['unique_keys']:,}")
-            print(f"   ⏱️  Time: {result['processing_time']:.2f} seconds")
-            print(f"   💾 Memory peak: {result.get('memory_peak_mb', 0):.1f} MB")
-            print("   📁 Output files:")
-            print(f"      • {result['output_files']['summary_csv']}")
-            print(f"      • {result['output_files']['natural_language']}")
-            return 0
+            if result["success"]:
+                print("\n🎉 SUCCESS: Data Quality Summarizer completed!")
+                print(f"   📊 Processed: {result['rows_processed']:,} rows")
+                print(f"   ❌ Failures: {result.get('row_failures', 0):,} rows")
+                print(f"   🔑 Unique keys: {result['unique_keys']:,}")
+                print(f"   ⏱️  Time: {result['processing_time']:.2f} seconds")
+                print(f"   💾 Memory peak: {result.get('memory_peak_mb', 0):.1f} MB")
+                print("   📁 Output files:")
+                print(f"      • {result['output_files']['summary_csv']}")
+                print(f"      • {result['output_files']['natural_language']}")
+                return 0
+            else:
+                print(f"\n❌ ERROR: Pipeline failed - {result['error']}", file=sys.stderr)
+                return 1
         else:
-            print(f"\n❌ ERROR: Pipeline failed - {result['error']}", file=sys.stderr)
+            logger.error(f"Unknown command: {args.command}")
             return 1
 
     except KeyboardInterrupt:
-        logger.info("Pipeline interrupted by user")
-        print("\n⚠️  Pipeline interrupted by user", file=sys.stderr)
+        logger.info("Operation interrupted by user")
+        print("\n⚠️  Operation interrupted by user", file=sys.stderr)
         return 1
 
     except Exception as e:
