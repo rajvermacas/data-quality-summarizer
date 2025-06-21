@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Data Quality Summarizer** - an offline data processing system that ingests large CSV files (~100k rows) containing data quality check results and produces LLM-optimized summary artifacts. The system is designed for consumer-grade machines (<8GB RAM) and follows a strict test-driven development approach.
+This is a **Data Quality Summarizer with ML Pipeline** - an offline data processing system that ingests large CSV files (~100k rows) containing data quality check results and produces both LLM-optimized summary artifacts and predictive ML models. The system combines traditional data summarization with machine learning capabilities for predictive data quality modeling. Designed for consumer-grade machines (<8GB RAM) and follows a strict test-driven development approach.
 
 ## Architecture
 
@@ -18,11 +18,27 @@ The system implements a **streaming aggregation pipeline** with the following ke
 - `__main__.py` - CLI entry point and pipeline orchestration
 - `constants.py` - System-wide constants and rule categories
 
+### ML Pipeline Modules (src/data_quality_summarizer/ml/)
+- `feature_engineering.py` - Feature extraction from aggregated data
+- `model_training.py` - LightGBM model training with cross-validation
+- `model_validation.py` - Model evaluation and performance metrics
+- `prediction_service.py` - Real-time prediction API and batch processing
+- `data_loader.py` - ML-specific data loading and preprocessing
+- `model_registry.py` - Model versioning and persistence management
+- `config.py` - ML pipeline configuration and hyperparameters
+- `preprocessing.py` - Data transformation and feature scaling
+- `evaluation.py` - Model performance assessment utilities
+- `cli.py` - ML command-line interface
+- `batch_prediction.py` - Batch prediction processing
+- `exceptions.py` - Custom ML pipeline exceptions
+- `utils.py` - ML utility functions and helpers
+
 ### Data Flow
 1. **Chunked Ingestion**: Reads CSV in 20k-row chunks to maintain <1GB memory usage
 2. **Streaming Aggregation**: Groups by `(source, tenant_id, dataset_uuid, dataset_name, rule_code)` 
 3. **Time Window Analysis**: Calculates rolling metrics for 1-month, 3-month, 12-month periods
 4. **Artifact Generation**: Produces structured CSV and natural language summaries
+5. **ML Pipeline**: Optionally trains LightGBM models for predictive data quality monitoring
 
 ### Key Data Schemas
 
@@ -70,6 +86,8 @@ open htmlcov/index.html
 ```
 
 ### Running the Application
+
+#### Core Data Summarization
 ```bash
 # Run the summarizer (fully implemented)
 python -m src.data_quality_summarizer input.csv rule_metadata.json
@@ -81,13 +99,27 @@ python -m src.data_quality_summarizer input.csv rule_metadata.json --chunk-size 
 python -m src.data_quality_summarizer resources/sample_data.csv resources/sample_rules.json
 ```
 
+#### ML Pipeline Commands
+```bash
+# Train ML model for predictive data quality
+python -m src train-model input.csv rule_metadata.json --output-model model.pkl
+
+# Make single prediction
+python -m src predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
+
+# Batch predictions from CSV
+python -m src batch-predict --model model.pkl --input predictions.csv --output results.csv
+
+```
+
 ## Project Status
 
 This project is **production-ready** with all planned features implemented. Key metrics:
-- **Test Coverage**: 90% across all modules (69 test cases)
+- **Test Coverage**: 86% across all modules (302 test cases, 14 test files)
 - **Code Quality**: All files under 800-line limit, strict typing with mypy
 - **Performance**: Meets all benchmarks (<2min runtime, <1GB memory for 100k rows)
-- **Architecture**: Clean 6-module design with streaming aggregation
+- **Architecture**: Clean modular design with streaming aggregation + ML pipeline
+- **ML Capabilities**: LightGBM-based predictive modeling with CLI and batch processing
 
 ## Development Guidelines
 
@@ -99,12 +131,12 @@ This project is **production-ready** with all planned features implemented. Key 
 ### Test-Driven Development Stages
 The project follows a 5-stage TDD approach (all stages completed):
 1. **Stage 1**: Core infrastructure & data ingestion ✅
-2. **Stage 2**: Rule metadata management ✅
+2. **Stage 2**: Rule metadata management ✅  
 3. **Stage 3**: Streaming aggregation engine ✅
-4. **Stage 4**: Summary generation & export ✅
-5. **Stage 5**: CLI integration & end-to-end testing ✅
+4. **Stage 4**: ML pipeline with LightGBM training and prediction ✅
+5. **Stage 5**: CLI integration and batch processing ✅
 
-Current test coverage: 90% across all modules.
+Current test coverage: 86% across all modules with comprehensive ML pipeline testing.
 
 ### File Size Limits
 - **Critical**: No file should exceed 800 lines - break into multiple files if needed
@@ -178,6 +210,8 @@ Each summary row generates an LLM-optimized sentence following this template:
 ### Development Dependencies
 All development tools are configured in `pyproject.toml`:
 - **Testing**: pytest with coverage reporting
-- **Formatting**: black with 88-character line length
+- **Formatting**: black with 88-character line length  
 - **Linting**: flake8 with E203/W503 exceptions
 - **Type Checking**: mypy with strict configuration
+- **ML Libraries**: LightGBM, scikit-learn for machine learning pipeline
+- **Data Processing**: pandas, numpy for data manipulation
