@@ -281,26 +281,26 @@ class TestStreamingAggregator:
         """Test trend flag calculation based on 1m vs 3m fail rates"""
         aggregator = StreamingAggregator()
 
-        # Test case 1: Improving trend (↓)
+        # Test case 1: Improving trend (down)
         metrics1 = AggregationMetrics()
         metrics1.fail_rate_1m = 0.2
         metrics1.fail_rate_3m = 0.4
         aggregator._calculate_trend_flag(metrics1)
-        assert metrics1.trend_flag == "↓"
+        assert metrics1.trend_flag == "down"
 
-        # Test case 2: Degrading trend (↑)
+        # Test case 2: Degrading trend (up)
         metrics2 = AggregationMetrics()
         metrics2.fail_rate_1m = 0.5
         metrics2.fail_rate_3m = 0.2
         aggregator._calculate_trend_flag(metrics2)
-        assert metrics2.trend_flag == "↑"
+        assert metrics2.trend_flag == "up"
 
-        # Test case 3: Stable trend (=)
+        # Test case 3: Stable trend (equal)
         metrics3 = AggregationMetrics()
         metrics3.fail_rate_1m = 0.3
         metrics3.fail_rate_3m = 0.31  # Within epsilon threshold
         aggregator._calculate_trend_flag(metrics3)
-        assert metrics3.trend_flag == "="
+        assert metrics3.trend_flag == "equal"
 
     def test_finalize_aggregation(self):
         """Test finalization of aggregation with all calculations"""
@@ -346,7 +346,7 @@ class TestStreamingAggregator:
         assert metrics.fail_rate_1m is not None
         assert metrics.fail_rate_3m is not None
         assert metrics.fail_rate_12m is not None
-        assert metrics.trend_flag in ["↑", "↓", "="]
+        assert metrics.trend_flag in ["up", "down", "equal"]
         assert metrics.business_date_latest is not None
 
 

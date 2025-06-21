@@ -47,7 +47,7 @@ class TestSummaryGenerator:
                 "fail_rate_1m": 0.0625,
                 "fail_rate_3m": 0.0476,
                 "fail_rate_12m": 0.0476,
-                "trend_flag": "↑",
+                "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }
         }
@@ -136,7 +136,7 @@ class TestSummaryGenerator:
         assert row["fail_count_total"] == 5
         assert row["pass_count_total"] == 100
         assert abs(row["fail_rate_total"] - 0.0476) < 0.0001
-        assert row["trend_flag"] == "↑"
+        assert row["trend_flag"] == "up"
 
     def test_generate_nl_sentences(self, sample_aggregated_data, temp_output_dir):
         """Test natural language sentence generation."""
@@ -159,7 +159,7 @@ class TestSummaryGenerator:
         assert "5 failures" in content
         assert "100 passes" in content
         assert "fail-rate 4.76%" in content
-        assert "trend ↑" in content
+        assert "trend up" in content
 
     def test_nl_sentence_template_exact_format(
         self, sample_aggregated_data, temp_output_dir
@@ -179,7 +179,7 @@ class TestSummaryGenerator:
             'under rule "ROW_COUNT" [101]',
             "recorded 5 failures and 100 passes overall",
             "(fail-rate 4.76%; 1-month 6.25%, 3-month 4.76%, 12-month 4.76%)",
-            "— trend ↑",
+            "— trend up",
         ]
 
         for part in expected_parts:
@@ -209,7 +209,7 @@ class TestSummaryGenerator:
                 "fail_rate_1m": 0.0625,
                 "fail_rate_3m": 0.0476,
                 "fail_rate_12m": 0.0476,
-                "trend_flag": "↑",
+                "trend_flag": "up",
                 "last_execution_level": "DATASET",
             },
             ("SRC2", "tenant2", "uuid2", "Dataset B", 102): {
@@ -279,7 +279,7 @@ class TestSummaryGenerator:
                 "fail_rate_1m": 0.0625,
                 "fail_rate_3m": 0.0476,
                 "fail_rate_12m": 0.0476,
-                "trend_flag": "↑",
+                "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }
         }
@@ -310,7 +310,7 @@ class TestStandaloneFunctions:
                 "rule_name": "ROW_COUNT",
                 "business_date_latest": date(2024, 1, 15),
                 "fail_count_total": 5,
-                "trend_flag": "↑",
+                "trend_flag": "up",
             }
         }
 
@@ -395,7 +395,7 @@ class TestEdgeCases:
                 "fail_rate_1m": 0.0625,
                 "fail_rate_3m": 0.0476,
                 "fail_rate_12m": 0.0476,
-                "trend_flag": "↑",
+                "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }
 

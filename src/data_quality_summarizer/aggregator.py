@@ -48,7 +48,7 @@ class AggregationMetrics:
     fail_rate_1m: Optional[float] = None
     fail_rate_3m: Optional[float] = None
     fail_rate_12m: Optional[float] = None
-    trend_flag: Optional[str] = None  # ↑, ↓, or =
+    trend_flag: Optional[str] = None  # up, down, or equal
 
     # Latest values from most recent row
     business_date_latest: Optional[date] = None
@@ -315,17 +315,17 @@ class StreamingAggregator:
             metrics: AggregationMetrics object to update with trend flag
         """
         if metrics.fail_rate_1m is None or metrics.fail_rate_3m is None:
-            metrics.trend_flag = "="
+            metrics.trend_flag = "equal"
             return
 
         diff = metrics.fail_rate_1m - metrics.fail_rate_3m
 
         if diff > self.epsilon:
-            metrics.trend_flag = "↑"  # Degrading (higher fail rate)
+            metrics.trend_flag = "up"  # Degrading (higher fail rate)
         elif diff < -self.epsilon:
-            metrics.trend_flag = "↓"  # Improving (lower fail rate)
+            metrics.trend_flag = "down"  # Improving (lower fail rate)
         else:
-            metrics.trend_flag = "="  # Stable
+            metrics.trend_flag = "equal"  # Stable
 
     def finalize_aggregation(self):
         """
