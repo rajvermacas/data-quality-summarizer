@@ -1,84 +1,124 @@
-# Data Quality Summarizer - Test Session Summary
+# Data Quality Summarizer - Predictive Model Development Session
 
 ## Session Overview
-**Date**: 2025-06-20  
-**Activity**: Comprehensive PRD validation testing as Senior Test Engineer  
-**Status**: ✅ ALL TESTS PASSED - Production Ready
+**Date**: 2025-06-21
+**Activity**: Planning Test-Driven Development for Predictive Model Feature
+**Status**: 📋 5-Stage TDD Plan Approved & Saved
 
-## Key Findings
+## Context Summary
 
-### ✅ Architecture Validation
-- All 5 core modules present and functional (`src/ingestion.py`, `src/aggregator.py`, `src/rules.py`, `src/summarizer.py`, `src/__main__.py`)
-- Streaming aggregation pipeline working correctly with composite keys
-- Memory-efficient chunked processing (20k default, configurable)
-- Test coverage: 90% across all modules (65/65 tests passing)
+### Project Status
+- **Core System**: Production-ready data quality summarizer with 90% test coverage
+- **Architecture**: 5-module streaming pipeline (ingestion → aggregation → rules → summarizer → CLI)
+- **Performance**: Meets all benchmarks (<2min runtime, <1GB memory for 100k rows)
+- **New Feature**: Predictive model for forecasting data quality pass percentages
 
-### ✅ Performance Benchmarks
-**100k Row Dataset Test:**
-- Runtime: 9.98 seconds (✅ < 2min requirement)
-- Memory: 297MB peak (✅ < 1GB requirement) 
-- Unique keys generated: 72,956
-- CSV output size: ~2MB (within spec)
+### Requirements Analysis
+**PRD Reviewed**: `resources/prd/predictive_model_prd.md`
+- **Goal**: Predict daily pass percentage for (dataset_uuid, rule_code, business_date) combinations
+- **Approach**: Regression model using LightGBM on historical execution logs
+- **Input**: `large_test.csv` with rule execution history
+- **Output**: Single floating-point prediction (0-100% pass rate)
 
-### ✅ Output Schema Compliance
-**CSV Schema**: Exactly 27 columns matching PRD specification
-1. source, tenant_id, dataset_uuid, dataset_name, rule_code
-2. rule_name, rule_type, dimension, rule_description, category
-3. business_date_latest, dataset_record_count_latest, filtered_record_count_latest
-4. pass_count_total, fail_count_total, pass_count_1m/3m/12m, fail_count_1m/3m/12m
-5. fail_rate_total, fail_rate_1m/3m/12m, trend_flag, last_execution_level
+### Technical Specifications
+**Model Architecture:**
+- **Algorithm**: LightGBM (CPU-optimized gradient boosting)
+- **Problem Type**: Time-series regression (not classification)
+- **Features**: Time-based + lag features + moving averages + categorical encodings
+- **Evaluation**: Mean Absolute Error (MAE) on chronologically split test set
 
-**Natural Language Template**: Matches PRD exactly
+**Performance Requirements:**
+- **Training**: <10 minutes for 100k rows on 4-core CPU
+- **Memory**: <2GB peak usage during training
+- **Prediction**: <100ms per single prediction, <1 minute for 1000 batch predictions
+- **Hardware**: Consumer-grade, CPU-only machines
+
+### 5-Stage TDD Development Plan
+**Plan Location**: `resources/development_plan/predictive_model_5_stage_tdd_plan.md`
+
+**Stage 1: Data Preparation & Feature Engineering**
+- Data loader with JSON parsing of `results` column
+- Aggregation by (dataset_uuid, rule_code, business_date)
+- Time-based features (day of week, month, etc.)
+- Lag features (1-day, 2-day, 7-day historical values)
+- Moving averages (3-day, 7-day windows)
+
+**Stage 2: Model Training Infrastructure**
+- Chronological train/test splitting (no random splits)
+- LightGBM integration with categorical feature handling
+- Model serialization/deserialization
+- MAE evaluation framework
+
+**Stage 3: Prediction Service**
+- Core prediction API: (dataset_uuid, rule_code, business_date) → pass_percentage
+- Input validation and error handling
+- Historical data lookup for feature engineering
+- Thread-safe service design
+
+**Stage 4: CLI Integration**
+- New CLI commands: `train-model`, `predict`, `batch-predict`
+- Integration with existing `__main__.py` orchestration
+- Batch prediction capabilities with CSV I/O
+- Progress indicators and user-friendly error messages
+
+**Stage 5: Production Optimization**
+- Performance optimization and benchmarking
+- Model validation and drift detection
+- Production-grade monitoring and health checks
+- Complete documentation and deployment guides
+
+### Dependencies to Add
+```toml
+# pyproject.toml additions needed
+lightgbm = "^4.0.0"    # Primary ML library
+scikit-learn = "^1.3.0" # Additional ML utilities
 ```
-• On {date}, dataset "{name}" (source: {source}, tenant: {tenant}, UUID: {uuid}) under rule "{rule}" [{code}] recorded {failures} failures and {passes} passes overall (fail-rate {rate:.2%}; 1-month {1m:.2%}, 3-month {3m:.2%}, 12-month {12m:.2%}) — trend {trend}.
+
+### Success Metrics
+- **Test Coverage**: >95% across all new ML modules
+- **Performance**: All benchmarks consistently met
+- **Code Quality**: All files <800 lines, proper mypy typing
+- **Prediction Accuracy**: MAE <5% on held-out test set
+- **Integration**: Seamless CLI integration without breaking existing functionality
+
+### Current Git Status
+```
+Current branch: main
+Modified files:
+M pyproject.toml
+M src/data_quality_summarizer/__main__.py
 ```
 
-### ✅ CLI Integration
-**Tested Commands:**
-```bash
-python -m src input.csv rules.json                           # Basic usage ✅
-python -m src input.csv rules.json --chunk-size 50000        # Custom chunk ✅  
-python -m src input.csv rules.json --output-dir /custom/path # Custom output ✅
-```
+### Next Steps
+1. Begin Stage 1: Create `src/data_quality_summarizer/ml/` module structure
+2. Implement data loading and feature engineering with TDD approach
+3. Add LightGBM dependencies to pyproject.toml
+4. Follow Red→Green→Refactor cycle for each component
 
-### ✅ Error Handling & Edge Cases
-- **Malformed JSON**: Graceful warnings, processing continues ✅
-- **Missing rule codes**: Warning logged, entries excluded ✅
-- **Missing files**: Proper error messages and exit codes ✅
-- **Large datasets**: Memory usage stays under limits ✅
+## Key Technical Decisions Made
 
-### ✅ Code Quality
-- **Black/Flake8**: Minor style issues identified (unused imports, long lines)
-- **MyPy**: Type annotations mostly complete, minor improvements needed
-- **File Size**: All files under 800-line limit ✅
-- **Test Structure**: Comprehensive unit and integration tests ✅
+### Feature Engineering Strategy
+- **Target Variable**: `pass_percentage = (SUM(is_pass) / COUNT(is_pass)) * 100`
+- **Grouping Key**: `(dataset_uuid, rule_code, business_date)`
+- **Time Features**: Extract from business_date (day_of_week, month, week_of_year)
+- **Lag Features**: Previous 1, 2, 7 days pass percentages
+- **Moving Averages**: 3-day and 7-day rolling averages
 
-## Performance Test Results
+### Data Processing Approach
+- **Streaming**: Process CSV in chunks to maintain memory efficiency
+- **Chronological Splitting**: Train on early dates, test on later dates
+- **Categorical Handling**: Use LightGBM's native categorical feature support
 
-| Dataset Size | Runtime | Memory Peak | Status |
-|-------------|---------|-------------|--------|
-| 15 rows | 0.10s | 75.6 MB | ✅ |
-| 10k rows | 1.09s | 108.6 MB | ✅ |
-| 100k rows | 9.98s | 297.1 MB | ✅ |
+### Architecture Patterns
+- **Module Structure**: `src/data_quality_summarizer/ml/` for all ML components
+- **Separation of Concerns**: Distinct modules for data prep, training, prediction
+- **Error Handling**: Graceful degradation with comprehensive logging
+- **Testing**: Unit tests + integration tests + performance benchmarks
 
-## Generated Artifacts Validated
-- `resources/artifacts/full_summary.csv`: Row-oriented summary with exact schema
-- `resources/artifacts/nl_all_rows.txt`: LLM-optimized natural language sentences
-- Output directories created automatically
-- UTF-8 encoding verified
-
-## Time Window Calculations Verified
-- 1-month: 30 days from latest business_date ✅
-- 3-month: 90 days from latest business_date ✅  
-- 12-month: 365 days from latest business_date ✅
-- Trend flags: ↑/↓/= logic working correctly ✅
-
-## Final Assessment
-**✅ PRODUCTION READY**: The Data Quality Summarizer fully meets all PRD requirements and performance specifications. Ready for deployment with 100k+ row datasets on consumer-grade machines.
-
-**Outstanding Minor Issues:**
-- Some unused imports in test files (cosmetic)
-- A few long lines needing formatting (cosmetic)
-- Minor type annotation improvements for mypy strictness
-
-**Core Functionality**: 100% validated against PRD requirements.
+## Session Completion Status
+✅ **Planning Phase Complete**
+- PRD analyzed and requirements understood
+- TDD methodology reviewed and applied
+- 5-stage development plan created with detailed acceptance criteria
+- Plan approved and saved to project documentation
+- Ready to begin Stage 1 implementation

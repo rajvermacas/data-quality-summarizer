@@ -1,0 +1,277 @@
+# **5-Stage Test-Driven Development Plan: Predictive Model for Data Quality Pass Percentage**
+
+## **Stage 1: Data Preparation and Feature Engineering Infrastructure**
+
+### **Objective**
+Establish the foundation for transforming raw execution logs into ML-ready features with proper data aggregation and time-series feature engineering.
+
+### **TDD Approach**
+- **RED**: Write tests for data loading, JSON parsing of results column, and basic aggregation functions
+- **GREEN**: Implement minimal data preparation utilities to make tests pass
+- **REFACTOR**: Optimize data processing for memory efficiency and performance
+
+### **Key Components to Develop**
+1. **Data Loader** (`src/data_quality_summarizer/ml/data_loader.py`)
+   - Function to load and validate CSV structure
+   - JSON parser for `results` column extraction
+   - Binary `is_pass` column creation
+
+2. **Aggregator** (`src/data_quality_summarizer/ml/aggregator.py`)
+   - Group by `(dataset_uuid, rule_code, business_date)`
+   - Calculate pass percentage per group
+   - Handle edge cases (zero executions, malformed data)
+
+3. **Feature Engineer** (`src/data_quality_summarizer/ml/feature_engineer.py`)
+   - Time-based feature extraction (day of week, month, etc.)
+   - Lag feature creation (1-day, 2-day, 7-day lags)
+   - Moving average calculations (3-day, 7-day windows)
+
+### **Test Coverage Requirements**
+- Unit tests for each data transformation function
+- Integration tests for end-to-end data pipeline
+- Edge case handling (missing dates, malformed JSON)
+- Performance tests (memory usage <1GB for 100k rows)
+
+### **Acceptance Criteria**
+- [ ] Raw CSV data successfully loaded and validated
+- [ ] `results` JSON column parsed with 100% accuracy
+- [ ] Pass percentage calculated correctly for all dataset/rule/date combinations
+- [ ] Time-based features extracted properly (day of week, month, etc.)
+- [ ] Lag features created with proper handling of missing historical data
+- [ ] Moving averages computed correctly across time windows
+- [ ] All tests pass with >90% code coverage
+- [ ] Memory usage remains <1GB during processing
+- [ ] Processing time <5 minutes for 100k row dataset
+
+---
+
+## **Stage 2: Model Training Infrastructure and LightGBM Integration**
+
+### **Objective**
+Create the machine learning pipeline with proper train/test splitting, model training, and evaluation framework using LightGBM.
+
+### **TDD Approach**
+- **RED**: Write tests for chronological data splitting, model training interface, and basic prediction functionality
+- **GREEN**: Implement minimal LightGBM wrapper and training pipeline
+- **REFACTOR**: Optimize hyperparameters and add robust error handling
+
+### **Key Components to Develop**
+1. **Data Splitter** (`src/data_quality_summarizer/ml/data_splitter.py`)
+   - Chronological train/test split (no random splitting)
+   - Validation of temporal ordering
+   - Configurable cutoff date selection
+
+2. **Model Trainer** (`src/data_quality_summarizer/ml/model_trainer.py`)
+   - LightGBM model configuration and training
+   - Categorical feature handling
+   - Hyperparameter management
+   - Model serialization/deserialization
+
+3. **Evaluator** (`src/data_quality_summarizer/ml/evaluator.py`)
+   - Mean Absolute Error (MAE) calculation
+   - Model performance metrics
+   - Prediction vs actual analysis
+
+### **Dependencies to Add**
+- Add `lightgbm` to pyproject.toml dependencies
+- Add `scikit-learn` for additional ML utilities
+
+### **Test Coverage Requirements**
+- Unit tests for data splitting logic
+- Model training and prediction tests
+- Evaluation metric calculations
+- Model persistence (save/load) tests
+- Integration tests for complete training pipeline
+
+### **Acceptance Criteria**
+- [ ] Chronological data splitting implemented correctly
+- [ ] LightGBM model trains successfully on prepared features
+- [ ] Categorical features (dataset_uuid, rule_code) handled properly
+- [ ] Model achieves reasonable baseline MAE on test set
+- [ ] Model serialization/deserialization works correctly
+- [ ] Training completes in <10 minutes on consumer hardware
+- [ ] All tests pass with >90% code coverage
+- [ ] Evaluation metrics calculated and reported accurately
+
+---
+
+## **Stage 3: Prediction Service and API Layer**
+
+### **Objective**
+Develop the prediction service that accepts input parameters and returns forecasted pass percentages with proper validation and error handling.
+
+### **TDD Approach**
+- **RED**: Write tests for prediction service interface, input validation, and output formatting
+- **GREEN**: Implement minimal prediction service to satisfy test requirements
+- **REFACTOR**: Add comprehensive error handling, logging, and performance optimization
+
+### **Key Components to Develop**
+1. **Prediction Service** (`src/data_quality_summarizer/ml/predictor.py`)
+   - Main prediction interface accepting (dataset_uuid, rule_code, business_date)
+   - Input validation and sanitization
+   - Feature engineering for new prediction data
+   - Model loading and inference
+
+2. **Input Validator** (`src/data_quality_summarizer/ml/validator.py`)
+   - Parameter type checking and validation
+   - Business date format validation
+   - Dataset/rule code existence verification
+
+3. **Feature Pipeline** (`src/data_quality_summarizer/ml/feature_pipeline.py`)
+   - Feature engineering for single prediction requests
+   - Historical data lookup for lag features
+   - Moving average calculation for new dates
+
+### **Test Coverage Requirements**
+- Unit tests for prediction service methods
+- Input validation edge cases
+- Feature pipeline for prediction data
+- Error handling and logging tests
+- Performance tests for prediction latency
+
+### **Acceptance Criteria**
+- [ ] Prediction service accepts required input parameters correctly
+- [ ] Input validation prevents invalid parameters with clear error messages
+- [ ] Historical data lookup works for lag feature calculation
+- [ ] Predictions return reasonable values (0-100 range)
+- [ ] Service handles missing historical data gracefully
+- [ ] Prediction latency <1 second for single requests
+- [ ] Comprehensive error logging implemented
+- [ ] All tests pass with >90% code coverage
+- [ ] Service is thread-safe and can handle concurrent requests
+
+---
+
+## **Stage 4: CLI Integration and End-to-End Pipeline**
+
+### **Objective**
+Integrate the prediction model with the existing CLI interface and create end-to-end workflows for both training and prediction.
+
+### **TDD Approach**
+- **RED**: Write tests for CLI commands, argument parsing, and complete pipeline integration
+- **GREEN**: Implement minimal CLI integration to make tests pass
+- **REFACTOR**: Enhance user experience, add progress indicators, and optimize performance
+
+### **Key Components to Develop**
+1. **CLI Commands** (extend `src/data_quality_summarizer/__main__.py`)
+   - `train-model` command for model training workflow
+   - `predict` command for single predictions
+   - `batch-predict` command for multiple predictions
+
+2. **Pipeline Orchestrator** (`src/data_quality_summarizer/ml/pipeline.py`)
+   - End-to-end training pipeline coordination
+   - Model management (save/load/version)
+   - Configuration management
+
+3. **Batch Predictor** (`src/data_quality_summarizer/ml/batch_predictor.py`)
+   - Multiple prediction handling
+   - CSV output for batch predictions
+   - Progress tracking and reporting
+
+### **CLI Interface Requirements**
+```bash
+# Training command
+python -m src train-model input.csv --output-model model.pkl
+
+# Single prediction
+python -m src predict --model model.pkl --dataset-uuid "abc123" --rule-code "R001" --date "2024-01-15"
+
+# Batch prediction
+python -m src batch-predict --model model.pkl --input predictions.csv --output results.csv
+```
+
+### **Test Coverage Requirements**
+- CLI argument parsing tests
+- End-to-end pipeline integration tests
+- Batch prediction functionality tests
+- Error handling for CLI commands
+- Performance tests for complete workflows
+
+### **Acceptance Criteria**
+- [ ] CLI commands integrated seamlessly with existing interface
+- [ ] Training pipeline completes successfully from command line
+- [ ] Single predictions work via CLI with proper output formatting
+- [ ] Batch predictions process multiple requests efficiently
+- [ ] Progress indicators show training and prediction progress
+- [ ] Error messages are user-friendly and actionable
+- [ ] All existing functionality remains unaffected
+- [ ] Complete integration tests pass
+- [ ] Documentation updated for new CLI commands
+
+---
+
+## **Stage 5: Performance Optimization and Production Readiness**
+
+### **Objective**
+Optimize the entire system for production use with comprehensive testing, performance benchmarks, and production-grade error handling.
+
+### **TDD Approach**
+- **RED**: Write performance tests, stress tests, and comprehensive integration tests
+- **GREEN**: Implement optimizations and production-grade features to meet performance requirements
+- **REFACTOR**: Final code cleanup, documentation, and deployment preparation
+
+### **Key Components to Develop**
+1. **Performance Optimizer** (`src/data_quality_summarizer/ml/optimizer.py`)
+   - Memory usage optimization
+   - Training time optimization
+   - Prediction latency optimization
+
+2. **Model Validator** (`src/data_quality_summarizer/ml/model_validator.py`)
+   - Model quality validation
+   - Drift detection capabilities
+   - Performance monitoring utilities
+
+3. **Production Utilities** (`src/data_quality_summarizer/ml/production.py`)
+   - Model versioning and management
+   - Health checks and monitoring
+   - Configuration management
+
+### **Performance Requirements**
+- Training: <10 minutes for 100k rows on 4-core CPU
+- Memory: <2GB peak usage during training
+- Prediction: <100ms per single prediction
+- Batch: <1 minute for 1000 predictions
+
+### **Test Coverage Requirements**
+- Comprehensive performance benchmarks
+- Stress tests with large datasets
+- Concurrent usage tests
+- Memory leak detection tests
+- End-to-end integration tests with real data
+
+### **Acceptance Criteria**
+- [ ] Training completes within performance targets
+- [ ] Memory usage stays within specified limits
+- [ ] Prediction latency meets performance requirements
+- [ ] Batch predictions scale efficiently
+- [ ] Model quality validation implemented
+- [ ] Comprehensive logging and monitoring in place
+- [ ] All performance benchmarks documented
+- [ ] Production deployment guide created
+- [ ] >95% test coverage across all ML modules
+- [ ] Code quality meets all project standards
+- [ ] Documentation complete and accurate
+
+---
+
+## **Overall Success Metrics**
+
+### **Technical Metrics**
+- **Test Coverage**: >95% across all new ML modules
+- **Performance**: All benchmarks met consistently
+- **Code Quality**: All files <800 lines, proper typing with mypy
+- **Memory Efficiency**: <2GB peak usage during training
+- **Prediction Accuracy**: MAE <5% on held-out test set
+
+### **Functional Metrics**
+- **API Completeness**: All required prediction inputs/outputs implemented
+- **CLI Integration**: Seamless integration with existing commands
+- **Error Handling**: Graceful handling of all edge cases
+- **Documentation**: Complete API and usage documentation
+
+### **Deployment Readiness**
+- [ ] All dependencies properly specified in pyproject.toml
+- [ ] Complete test suite with automated CI/CD compatibility
+- [ ] Performance benchmarks documented and reproducible
+- [ ] Production deployment guide available
+- [ ] Model versioning and management system in place

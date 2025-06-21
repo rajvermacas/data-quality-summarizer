@@ -10,12 +10,13 @@ This is a **Data Quality Summarizer** - an offline data processing system that i
 
 The system implements a **streaming aggregation pipeline** with the following key components:
 
-### Core Modules (src/)
+### Core Modules (src/data_quality_summarizer/)
 - `ingestion.py` - Chunked CSV reader using pandas with configurable chunk size (20k default)
 - `aggregator.py` - Streaming aggregation engine with rolling time windows
 - `rules.py` - Rule metadata loader and validation utilities  
 - `summarizer.py` - CSV and natural language artifact generation
 - `__main__.py` - CLI entry point and pipeline orchestration
+- `constants.py` - System-wide constants and rule categories
 
 ### Data Flow
 1. **Chunked Ingestion**: Reads CSV in 20k-row chunks to maintain <1GB memory usage
@@ -71,22 +72,22 @@ open htmlcov/index.html
 ### Running the Application
 ```bash
 # Run the summarizer (fully implemented)
-python -m src input.csv rule_metadata.json
+python -m src.data_quality_summarizer input.csv rule_metadata.json
 
 # With custom chunk size
-python -m src input.csv rule_metadata.json --chunk-size 50000
+python -m src.data_quality_summarizer input.csv rule_metadata.json --chunk-size 50000
 
 # Example with sample data (if available in resources/)
-python -m src resources/sample_data.csv resources/sample_rules.json
+python -m src.data_quality_summarizer resources/sample_data.csv resources/sample_rules.json
 ```
 
 ## Project Status
 
 This project is **production-ready** with all planned features implemented. Key metrics:
-- **Test Coverage**: 90% across all modules
+- **Test Coverage**: 90% across all modules (69 test cases)
 - **Code Quality**: All files under 800-line limit, strict typing with mypy
 - **Performance**: Meets all benchmarks (<2min runtime, <1GB memory for 100k rows)
-- **Architecture**: Clean 5-module design with streaming aggregation
+- **Architecture**: Clean 6-module design with streaming aggregation
 
 ## Development Guidelines
 
