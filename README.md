@@ -40,7 +40,7 @@ source venv/bin/activate  # Linux/Mac
 pip install -e ".[dev]"
 
 # Run with sample data
-python -m src sample_input.csv sample_rules.json
+python -m src.data_quality_summarizer sample_input.csv sample_rules.json
 
 # View results
 cat resources/artifacts/full_summary.csv
@@ -109,23 +109,23 @@ python -m src.data_quality_summarizer input.csv rules.json 2>&1 | tee processing
 
 ```bash
 # Train ML model for predictive data quality
-python -m src train-model input.csv rule_metadata.json --output-model model.pkl
+python -m src.data_quality_summarizer train-model input.csv rule_metadata.json --output-model model.pkl
 
 # Make single prediction
-python -m src predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
+python -m src.data_quality_summarizer predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
 
 # Batch predictions from CSV input
-python -m src batch-predict --model model.pkl --input predictions.csv --output results.csv
+python -m src.data_quality_summarizer batch-predict --model model.pkl --input predictions.csv --output results.csv
 
 # Validate existing model performance
-python -m src validate-model --model model.pkl --test-data test.csv
+python -m src.data_quality_summarizer validate-model --model model.pkl --test-data test.csv
 ```
 
 #### 3. Alternative Entry Points
 
 ```bash
 # Direct module execution (equivalent to primary)
-python -m src <csv_file> <rule_metadata_file>
+python -m src.data_quality_summarizer <csv_file> <rule_metadata_file>
 
 # Using the main module explicitly
 python -m src.data_quality_summarizer.__main__ input.csv rules.json
@@ -164,16 +164,16 @@ python -m src.data_quality_summarizer input.csv rules.json
 python -m src.data_quality_summarizer large_data.csv rules.json --chunk-size 50000
 
 # Training ML model for predictive analytics
-python -m src train-model input.csv rules.json --output-model quality_model.pkl
+python -m src.data_quality_summarizer train-model input.csv rules.json --output-model quality_model.pkl
 
 # Making single prediction
-python -m src predict --model quality_model.pkl --dataset-uuid dataset123 --rule-code R001 --date 2024-01-15
+python -m src.data_quality_summarizer predict --model quality_model.pkl --dataset-uuid dataset123 --rule-code R001 --date 2024-01-15
 
 # Batch predictions for multiple datasets
-python -m src batch-predict --model quality_model.pkl --input batch_input.csv --output predictions.csv
+python -m src.data_quality_summarizer batch-predict --model quality_model.pkl --input batch_input.csv --output predictions.csv
 
 # Model validation and performance metrics
-python -m src validate-model --model quality_model.pkl --test-data validation.csv
+python -m src.data_quality_summarizer validate-model --model quality_model.pkl --test-data validation.csv
 
 # Development mode with detailed logging
 export LOG_LEVEL=DEBUG
@@ -457,17 +457,17 @@ Tested on **4-core consumer laptop** (8GB RAM):
 #### Memory Optimization
 ```bash
 # Reduce chunk size for memory-constrained systems
-python -m src input.csv rules.json --chunk-size 10000
+python -m src.data_quality_summarizer input.csv rules.json --chunk-size 10000
 
 # Monitor memory usage with structured logging
 export LOG_LEVEL=DEBUG
-python -m src input.csv rules.json
+python -m src.data_quality_summarizer input.csv rules.json
 ```
 
 #### Processing Speed
 ```bash
 # Increase chunk size for faster processing (requires more RAM)
-python -m src input.csv rules.json --chunk-size 50000
+python -m src.data_quality_summarizer input.csv rules.json --chunk-size 50000
 
 # Use SSD storage for better I/O performance
 # Process files locally rather than network drives
