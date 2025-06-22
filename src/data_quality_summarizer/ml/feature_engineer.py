@@ -190,3 +190,124 @@ def engineer_all_features(df: pd.DataFrame) -> pd.DataFrame:
                 total_features=len(result_df.columns))
     
     return result_df
+
+
+def find_closest_lag_value(
+    group_sorted: pd.DataFrame, 
+    current_date: pd.Timestamp, 
+    lag_days: int, 
+    tolerance_days: int = 3
+) -> float:
+    """
+    Find the closest lag value within a tolerance window.
+    
+    This function implements nearest-neighbor lag calculation to handle
+    data gaps more gracefully than exact date matching.
+    
+    Args:
+        group_sorted: DataFrame sorted by business_date for a specific group
+        current_date: Current date to calculate lag from
+        lag_days: Number of days to look back
+        tolerance_days: Maximum deviation from exact lag date (default: 3)
+        
+    Returns:
+        Closest lag value within tolerance, or NaN if none found
+    """
+    if group_sorted.empty:
+        return pd.NA
+        
+    # Calculate target lag date
+    target_lag_date = current_date - pd.Timedelta(days=lag_days)
+    
+    # Find all dates before or equal to current date (can't use future data)
+    valid_dates = group_sorted[group_sorted['business_date'] <= current_date].copy()
+    
+    if valid_dates.empty:
+        return pd.NA
+    
+    # Calculate distance from target lag date
+    valid_dates['distance'] = abs((valid_dates['business_date'] - target_lag_date).dt.days)
+    
+    # Find closest date within tolerance
+    within_tolerance = valid_dates[valid_dates['distance'] <= tolerance_days]
+    
+    if within_tolerance.empty:
+        return pd.NA
+    
+    # Return the value from the closest date (smallest distance)
+    closest_row = within_tolerance.loc[within_tolerance['distance'].idxmin()]
+    return closest_row['pass_percentage']
+
+
+def get_imputation_strategy(historical_data: pd.DataFrame = None) -> dict:
+    """
+    Get imputation strategy for feature engineering.
+    
+    Args:
+        historical_data: Optional historical data to calculate averages
+        
+    Returns:
+        Dictionary containing imputation configuration
+    """
+    if historical_data is not None and 'pass_percentage' in historical_data.columns:
+        # Use historical average as default value
+        default_value = float(historical_data['pass_percentage'].mean())
+    else:
+        # Use reasonable default when no historical data available
+        default_value = 50.0
+    
+    return {
+        'lag_features': {
+            'method': 'nearest_neighbor',
+            'tolerance_days': 3,
+            'default_value': default_value
+        },
+        'moving_averages': {
+            'method': 'flexible_window',
+            'min_periods': 1,
+            'default_value': default_value
+        },
+        'time_features': {
+            'allow_nan': False  # Time features should never be NaN
+        }
+    }
+
+
+def calculate_flexible_moving_average(
+    data: pd.DataFrame,
+    window_size: int,
+    min_periods: int = 1
+) -> pd.DataFrame:
+    """
+    Calculate moving averages with flexible minimum periods.
+    
+    Args:
+        data: DataFrame with business_date and pass_percentage columns
+        window_size: Size of moving window in days
+        min_periods: Minimum periods required for calculation
+        
+    Returns:
+        DataFrame with additional moving average column
+    """
+    result_df = data.copy()
+    
+    if len(result_df) == 0:
+        result_df[f'avg_{window_size}_day'] = pd.Series(dtype='float64')
+        return result_df
+    
+    # Ensure data is sorted by date
+    result_df = result_df.sort_values('business_date').reset_index(drop=True)
+    
+    # Calculate rolling average with flexible minimum periods
+    result_df[f'avg_{window_size}_day'] = result_df['pass_percentage'].rolling(
+        window=window_size,
+        min_periods=min_periods,
+        center=False
+    ).mean()
+    
+    logger.info(f"Flexible moving average calculated",
+                window_size=window_size,
+                min_periods=min_periods,
+                rows=len(result_df))
+    
+    return result_df

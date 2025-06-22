@@ -210,3 +210,15 @@ build/
 dist/
 *.tar.gz
 *.whl
+
+# Stage 1 Data Validation & Preprocessing artifacts
+model_diagnostics/
+data_quality_report_*.json
+validation_cache/
+imputation_strategy_*.json
+feature_validation_*.csv
+target_distribution_*.json
+sample_size_report_*.csv
+feature_rank_analysis_*.json
+validation_failures_*.log
+quality_gate_reports/

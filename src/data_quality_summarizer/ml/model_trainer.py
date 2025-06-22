@@ -9,6 +9,7 @@ import numpy as np
 import lightgbm as lgb
 import pickle
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 import logging
 
 
@@ -474,3 +475,99 @@ def load_model(file_path: str) -> lgb.Booster:
     except Exception as e:
         logger.error(f"Failed to load model from {file_path}: {e}")
         raise
+
+
+def train_lightgbm_model_with_validation(
+    data: pd.DataFrame,
+    feature_cols: List[str],
+    categorical_cols: List[str],
+    target_col: str,
+    params: Optional[Dict[str, Any]] = None,
+    validation_config: Optional[Dict[str, Any]] = None,
+    model_diagnostics_dir: Optional[Path] = None
+) -> lgb.Booster:
+    """
+    Train a LightGBM model with comprehensive data validation.
+    
+    This enhanced training function implements Stage 1 requirements:
+    - Target variable distribution validation
+    - Sample size checking per group
+    - Feature matrix rank validation
+    - Quality report generation
+    
+    Args:
+        data: Training data DataFrame
+        feature_cols: List of feature column names (numeric features)
+        categorical_cols: List of categorical feature column names  
+        target_col: Target variable column name
+        params: Optional LightGBM parameters
+        validation_config: Optional validation configuration
+        model_diagnostics_dir: Optional directory for diagnostic outputs
+        
+    Returns:
+        Trained LightGBM Booster model
+        
+    Raises:
+        DataQualityException: If data quality validation fails
+        ValueError: If data is empty or columns are missing
+    """
+    from .data_validator import DataValidator, DataQualityException
+    from pathlib import Path
+    
+    # Initialize validation configuration
+    if validation_config is None:
+        validation_config = {}
+    
+    min_variance = validation_config.get('min_variance', 0.1)
+    min_samples_per_group = validation_config.get('min_samples_per_group', 20)
+    
+    # Create data validator with custom thresholds
+    validator = DataValidator(
+        min_variance=min_variance,
+        min_samples_per_group=min_samples_per_group
+    )
+    
+    logger.info("Starting enhanced model training with data validation")
+    
+    # Step 1: Target variable validation
+    logger.info("Validating target variable distribution")
+    target_report = validator.validate_target_distribution(data, target_col)
+    logger.info("Target validation passed", 
+                target_stats=target_report.details['target_stats'])
+    
+    # Step 2: Sample size validation
+    logger.info("Validating sample sizes per group")
+    group_cols = categorical_cols if categorical_cols else ['dataset_uuid', 'rule_code']
+    sample_counts = validator.check_sample_sizes(data, group_cols)
+    logger.info("Sample size validation passed", 
+                total_groups=len(sample_counts),
+                min_samples=min(sample_counts.values()))
+    
+    # Step 3: Feature matrix rank validation
+    logger.info("Validating feature matrix rank")
+    feature_data = data[feature_cols]
+    rank_ratio = validator.validate_feature_matrix_rank(feature_data)
+    logger.info("Feature matrix validation passed", rank_ratio=rank_ratio)
+    
+    # Step 4: Generate comprehensive quality report
+    if model_diagnostics_dir:
+        model_diagnostics_dir = Path(model_diagnostics_dir)
+        model_diagnostics_dir.mkdir(parents=True, exist_ok=True)
+        report_path = model_diagnostics_dir / "data_quality_report.json"
+        
+        logger.info("Generating comprehensive quality report")
+        quality_report = validator.generate_quality_report(data, report_path)
+        logger.info("Quality report generated", report_path=str(report_path))
+    
+    # Step 5: Proceed with model training using original function
+    logger.info("Data validation passed - proceeding with model training")
+    model = train_lightgbm_model(
+        data=data,
+        feature_cols=feature_cols,
+        categorical_cols=categorical_cols,
+        target_col=target_col,
+        params=params
+    )
+    
+    logger.info("Enhanced model training completed successfully")
+    return model
