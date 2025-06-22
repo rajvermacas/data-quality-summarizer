@@ -228,3 +228,150 @@ class Predictor:
                           clipped_prediction=clipped_prediction)
         
         return float(clipped_prediction)
+    
+    def _validate_prediction_quality(self, predictions: np.ndarray) -> bool:
+        """
+        Validate prediction quality to detect constant predictions.
+        
+        This method implements US3.2: Prediction quality assurance with 
+        constant prediction detection. It checks if predictions show
+        sufficient variance to be considered valid.
+        
+        Args:
+            predictions: Array of model predictions
+            
+        Returns:
+            True if predictions show sufficient variance, False otherwise
+        """
+        if len(predictions) == 0:
+            logger.warning("Empty prediction array provided")
+            return False
+        
+        # Calculate prediction statistics
+        pred_std = np.std(predictions)
+        unique_predictions = len(np.unique(predictions))
+        pred_range = np.max(predictions) - np.min(predictions)
+        
+        # Variance threshold: standard deviation should be > 0.1%
+        variance_threshold = 0.1
+        variance_sufficient = pred_std > variance_threshold
+        
+        # Uniqueness threshold: should have multiple unique values
+        uniqueness_sufficient = unique_predictions > 1
+        
+        # Range threshold: range should be meaningful
+        range_threshold = 1.0  # At least 1% range
+        range_sufficient = pred_range > range_threshold
+        
+        overall_valid = variance_sufficient and uniqueness_sufficient and range_sufficient
+        
+        logger.info("Prediction quality validation",
+                   prediction_count=len(predictions),
+                   std_deviation=pred_std,
+                   unique_values=unique_predictions,
+                   prediction_range=pred_range,
+                   variance_sufficient=variance_sufficient,
+                   uniqueness_sufficient=uniqueness_sufficient,
+                   range_sufficient=range_sufficient,
+                   overall_valid=overall_valid)
+        
+        if not overall_valid:
+            logger.warning("Prediction quality validation failed",
+                          std=pred_std,
+                          unique_count=unique_predictions,
+                          range=pred_range)
+        
+        return overall_valid
+
+
+class BaselinePredictor:
+    """
+    Baseline prediction service using historical averages as fallback.
+    
+    This class implements a simple fallback mechanism for when the main
+    ML model fails or produces constant predictions. It uses historical
+    averages per dataset-rule combination to provide reasonable predictions.
+    """
+    
+    def __init__(self, historical_data: pd.DataFrame = None):
+        """
+        Initialize baseline predictor with historical data.
+        
+        Args:
+            historical_data: DataFrame with historical pass percentage data
+        """
+        self.historical_data = historical_data if historical_data is not None else pd.DataFrame()
+        self._baseline_cache = {}
+        self._compute_baselines()
+        
+        logger.info("BaselinePredictor initialized",
+                   historical_records=len(self.historical_data),
+                   baseline_combinations=len(self._baseline_cache))
+    
+    def _compute_baselines(self):
+        """Compute baseline predictions from historical data."""
+        if self.historical_data.empty:
+            return
+        
+        # Group by dataset and rule to compute averages
+        if all(col in self.historical_data.columns for col in ['dataset_uuid', 'rule_code', 'pass_percentage']):
+            baselines = self.historical_data.groupby(['dataset_uuid', 'rule_code'])['pass_percentage'].mean()
+            self._baseline_cache = baselines.to_dict()
+            
+            logger.debug("Computed baseline predictions",
+                        baseline_count=len(self._baseline_cache))
+    
+    def predict(self, dataset_uuid: str, rule_code: str) -> float:
+        """
+        Predict pass percentage using historical average.
+        
+        Args:
+            dataset_uuid: Dataset identifier
+            rule_code: Rule code
+            
+        Returns:
+            Predicted pass percentage based on historical average
+        """
+        # Try to get specific baseline for this dataset-rule combination
+        baseline_key = (dataset_uuid, rule_code)
+        
+        if baseline_key in self._baseline_cache:
+            prediction = self._baseline_cache[baseline_key]
+            logger.debug("Baseline prediction from specific combination",
+                        dataset_uuid=dataset_uuid,
+                        rule_code=rule_code,
+                        prediction=prediction)
+            return prediction
+        
+        # Fallback to rule-specific average
+        rule_baselines = [v for k, v in self._baseline_cache.items() if k[1] == rule_code]
+        if rule_baselines:
+            prediction = np.mean(rule_baselines)
+            logger.debug("Baseline prediction from rule average",
+                        rule_code=rule_code,
+                        prediction=prediction)
+            return prediction
+        
+        # Fallback to dataset-specific average  
+        dataset_baselines = [v for k, v in self._baseline_cache.items() if k[0] == dataset_uuid]
+        if dataset_baselines:
+            prediction = np.mean(dataset_baselines)
+            logger.debug("Baseline prediction from dataset average",
+                        dataset_uuid=dataset_uuid,
+                        prediction=prediction)
+            return prediction
+        
+        # Final fallback to global average or 50%
+        if self._baseline_cache:
+            prediction = np.mean(list(self._baseline_cache.values()))
+            logger.debug("Baseline prediction from global average",
+                        prediction=prediction)
+            return prediction
+        
+        # Ultimate fallback
+        prediction = 50.0
+        logger.warning("Using ultimate fallback prediction",
+                      dataset_uuid=dataset_uuid,
+                      rule_code=rule_code,
+                      prediction=prediction)
+        return prediction

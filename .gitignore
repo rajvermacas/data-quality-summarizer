@@ -238,3 +238,23 @@ stage2_validation_reports/
 lightgbm_optimization_*.log
 enhanced_feature_debug_*.json
 training_performance_*.json
+
+# Stage 3 Prediction Pipeline Fix & Comprehensive Validation artifacts
+feature_consistency_reports/
+prediction_quality_logs/
+comprehensive_validation_*.json
+baseline_prediction_cache_*.json
+feature_alignment_reports/
+prediction_variance_analysis_*.csv
+cross_dataset_validation_*.json
+validation_report_stage3_*.json
+feature_consistency_debug_*.json
+prediction_quality_metrics_*.json
+baseline_fallback_stats_*.csv
+comprehensive_validator_cache/
+stage3_test_models/
+prediction_quality_validation_*.log
+feature_utils_cache/
+categorical_consistency_*.json
+prediction_analysis_plots/
+validation_framework_reports/
