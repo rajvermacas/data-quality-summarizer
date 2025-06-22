@@ -85,34 +85,99 @@ pip install -e ".[dev]"
 
 ## 📖 Usage
 
-### Command Line Interface
+### How to Run the Application
+
+This application provides multiple ways to run the data quality summarizer with both core data processing and advanced ML pipeline capabilities:
+
+#### 1. Core Data Summarization (Primary Module)
 
 ```bash
-python -m src <csv_file> <rule_metadata_file> [options]
+# Basic usage - Process CSV file with rule metadata
+python -m src.data_quality_summarizer <csv_file> <rule_metadata_file>
+
+# With custom chunk size for memory optimization
+python -m src.data_quality_summarizer input.csv rules.json --chunk-size 50000
+
+# With custom output directory
+python -m src.data_quality_summarizer input.csv rules.json --output-dir /custom/path
+
+# Performance monitoring with detailed logging
+python -m src.data_quality_summarizer input.csv rules.json 2>&1 | tee processing.log
 ```
 
-**Arguments:**
+#### 2. ML Pipeline Commands
+
+```bash
+# Train ML model for predictive data quality
+python -m src train-model input.csv rule_metadata.json --output-model model.pkl
+
+# Make single prediction
+python -m src predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
+
+# Batch predictions from CSV input
+python -m src batch-predict --model model.pkl --input predictions.csv --output results.csv
+
+# Validate existing model performance
+python -m src validate-model --model model.pkl --test-data test.csv
+```
+
+#### 3. Alternative Entry Points
+
+```bash
+# Direct module execution (equivalent to primary)
+python -m src <csv_file> <rule_metadata_file>
+
+# Using the main module explicitly
+python -m src.data_quality_summarizer.__main__ input.csv rules.json
+
+# Running with Python interpreter
+python src/data_quality_summarizer/__main__.py input.csv rules.json
+```
+
+### Command Line Interface
+
+**Core Summarization Arguments:**
 - `csv_file` - Path to input CSV containing data quality results
 - `rule_metadata_file` - Path to JSON file with rule definitions
 
-**Options:**
+**Core Options:**
 - `--chunk-size N` - Rows per processing chunk (default: 20000)
 - `--output-dir PATH` - Output directory (default: resources/artifacts)
 
-### Examples
+**ML Pipeline Options:**
+- `--output-model PATH` - Path to save trained model (default: model.pkl)
+- `--model PATH` - Path to trained model for predictions
+- `--dataset-uuid UUID` - Dataset identifier for single predictions
+- `--rule-code CODE` - Rule code for single predictions  
+- `--date YYYY-MM-DD` - Business date for single predictions
+- `--input PATH` - Input CSV for batch predictions
+- `--output PATH` - Output file for batch predictions
+- `--test-data PATH` - Test data for model validation
+
+### Usage Examples
 
 ```bash
-# Basic usage
-python -m src input.csv rules.json
+# Basic data quality summarization
+python -m src.data_quality_summarizer input.csv rules.json
 
-# Custom chunk size for large files
-python -m src large_data.csv rules.json --chunk-size 50000
+# Large file processing with custom chunk size
+python -m src.data_quality_summarizer large_data.csv rules.json --chunk-size 50000
 
-# Custom output directory
-python -m src input.csv rules.json --output-dir /custom/path
+# Training ML model for predictive analytics
+python -m src train-model input.csv rules.json --output-model quality_model.pkl
 
-# Performance monitoring
-python -m src input.csv rules.json 2>&1 | tee processing.log
+# Making single prediction
+python -m src predict --model quality_model.pkl --dataset-uuid dataset123 --rule-code R001 --date 2024-01-15
+
+# Batch predictions for multiple datasets
+python -m src batch-predict --model quality_model.pkl --input batch_input.csv --output predictions.csv
+
+# Model validation and performance metrics
+python -m src validate-model --model quality_model.pkl --test-data validation.csv
+
+# Development mode with detailed logging
+export LOG_LEVEL=DEBUG
+python -m src.data_quality_summarizer input.csv rules.json
 ```
 
 ### Sample Files
