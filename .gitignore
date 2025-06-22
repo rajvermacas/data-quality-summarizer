@@ -100,3 +100,23 @@ performance_report.json
 # Temporary testing files
 temp_*/
 tmp_*/
+
+# LightGBM specific files
+*.txt.lgb
+lgb_model_*.txt
+model_*.txt
+
+# Stage 3 test fixtures - temporary model files
+/tmp/tmp*.pkl
+*.real_model.pkl
+test_fixture_*.pkl
+
+# IDE and editor files
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# CI/CD artifacts
+.github/artifacts/
+ci_artifacts/
+deployment_logs/
