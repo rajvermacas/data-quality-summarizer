@@ -108,18 +108,29 @@ class TestFeatureEngineeringConsistency:
         
         The current bug is that prediction hardcodes only numeric features.
         """
-        # Create test data with categorical features
-        data = pd.DataFrame({
-            'business_date': ['2024-01-01'] * 5,
-            'dataset_uuid': ['uuid1', 'uuid2'] * 2 + ['uuid1'],
-            'rule_code': [1, 2, 1, 2, 1],
-            'source': ['src1'] * 5,
-            'tenant_id': ['tenant1'] * 5, 
-            'dataset_name': ['dataset1'] * 5,
-            'results': ['{"status": "PASS"}'] * 5,
-            'level_of_execution': ['row'] * 5,
-            'attribute_name': ['attr1'] * 5
-        })
+        # Create test data with categorical features - enough for training (50+ samples)
+        dates = [f'2024-01-{i:02d}' for i in range(1, 31)]  # 30 days
+        uuids = ['uuid1', 'uuid2', 'uuid3', 'uuid4']  # 4 datasets
+        rules = [1, 2]  # 2 rules
+        
+        # Generate combinations: 30 days * 4 datasets * 2 rules = 240 samples
+        data_rows = []
+        for date in dates:
+            for uuid in uuids:
+                for rule in rules:
+                    data_rows.append({
+                        'business_date': date,
+                        'dataset_uuid': uuid,
+                        'rule_code': rule,
+                        'source': 'src1',
+                        'tenant_id': 'tenant1',
+                        'dataset_name': f'dataset_{uuid}',
+                        'results': '{"status": "PASS"}',
+                        'level_of_execution': 'row',
+                        'attribute_name': 'attr1'
+                    })
+        
+        data = pd.DataFrame(data_rows)
         
         rule_metadata = {
             1: {"category": "completeness", "description": "Test rule 1"},

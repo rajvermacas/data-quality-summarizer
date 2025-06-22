@@ -168,3 +168,15 @@ model_metadata_*.json
 error_recovery_test_*.csv
 resumable_batch_*.csv
 input_validation_test_*.csv
+
+# Stage 3 advanced ML features artifacts  
+ab_experiments/
+hyperparameter_results_*.json
+optimization_history_*.csv
+ab_test_data_*.json
+experiment_results_*.csv
+model_comparison_report_*.json
+bayesian_search_trials_*.json
+traffic_split_analysis_*.csv
+statistical_significance_*.json
+ab_experiment_*.json

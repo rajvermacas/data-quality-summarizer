@@ -64,11 +64,14 @@ class ProductionUtils:
         """
         version_id = str(uuid.uuid4())
         
-        if version:
-            metadata['version'] = version
+        # Create a copy of metadata to avoid modifying the original
+        metadata_copy = metadata.copy()
         
-        metadata['version_id'] = version_id
-        metadata['saved_at'] = datetime.now().isoformat()
+        if version:
+            metadata_copy['version'] = version
+        
+        metadata_copy['version_id'] = version_id
+        metadata_copy['saved_at'] = datetime.now().isoformat()
         
         # Save model
         model_file = os.path.join(self.models_path, f'{version_id}.pkl')
@@ -78,10 +81,10 @@ class ProductionUtils:
         # Save metadata
         metadata_file = os.path.join(self.models_path, f'{version_id}_metadata.json')
         with open(metadata_file, 'w') as f:
-            json.dump(metadata, f, indent=2)
+            json.dump(metadata_copy, f, indent=2)
         
         # Update registry
-        self.model_registry[version_id] = metadata
+        self.model_registry[version_id] = metadata_copy
         self._save_model_registry()
         
         logger.info(f"Model version saved: {version_id} (version: {version})")
@@ -473,3 +476,142 @@ class ProductionUtils:
             return None
         
         return max(all_timestamps)
+    
+    def compare_models(self, version_id_a: str, version_id_b: str) -> Dict[str, Any]:
+        """
+        Compare performance between two model versions.
+        
+        Stage 3 enhancement: Advanced model comparison with performance metrics
+        and automated recommendation generation.
+        
+        Args:
+            version_id_a: First model version ID
+            version_id_b: Second model version ID
+            
+        Returns:
+            Dictionary containing detailed comparison results
+        """
+        if version_id_a not in self.model_registry:
+            raise ValueError(f"Model version {version_id_a} not found in registry")
+        if version_id_b not in self.model_registry:
+            raise ValueError(f"Model version {version_id_b} not found in registry")
+        
+        metadata_a = self.model_registry[version_id_a]
+        metadata_b = self.model_registry[version_id_b]
+        
+        # Extract performance metrics
+        metrics_a = metadata_a.get('performance_metrics', {})
+        metrics_b = metadata_b.get('performance_metrics', {})
+        
+        # Compare each metric
+        performance_comparison = {}
+        for metric in ['mae', 'rmse', 'r2']:
+            if metric in metrics_a and metric in metrics_b:
+                value_a = metrics_a[metric]
+                value_b = metrics_b[metric]
+                
+                # Determine winner (lower is better for mae/rmse, higher for r2)
+                if metric in ['mae', 'rmse']:
+                    winner = 'model_a' if value_a < value_b else 'model_b'
+                else:  # r2
+                    winner = 'model_a' if value_a > value_b else 'model_b'
+                
+                performance_comparison[metric] = {
+                    'model_a': value_a,
+                    'model_b': value_b,
+                    'winner': winner,
+                    'difference': abs(value_a - value_b)
+                }
+        
+        # Determine overall recommendation
+        wins_a = sum(1 for comp in performance_comparison.values() if comp['winner'] == 'model_a')
+        wins_b = sum(1 for comp in performance_comparison.values() if comp['winner'] == 'model_b')
+        
+        if wins_a > wins_b:
+            recommendation = 'model_a'
+        elif wins_b > wins_a:
+            recommendation = 'model_b'
+        else:
+            recommendation = 'tie'
+        
+        logger.info(f"Model comparison completed: {version_id_a} vs {version_id_b}, recommendation: {recommendation}")
+        
+        return {
+            'model_a': {
+                'version_id': version_id_a,
+                'version': metadata_a.get('version', 'unknown'),
+                'metrics': metrics_a
+            },
+            'model_b': {
+                'version_id': version_id_b,  
+                'version': metadata_b.get('version', 'unknown'),
+                'metrics': metrics_b
+            },
+            'performance_comparison': performance_comparison,
+            'recommendation': recommendation,
+            'comparison_timestamp': datetime.now().isoformat()
+        }
+    
+    def promote_model(self, version_id: str, environment: str) -> bool:
+        """
+        Promote a model version to a specific environment.
+        
+        Stage 3 enhancement: Model promotion with environment tracking
+        and deployment validation.
+        
+        Args:
+            version_id: Model version ID to promote
+            environment: Target environment (e.g., 'staging', 'production')
+            
+        Returns:
+            True if promotion successful, False otherwise
+        """
+        if version_id not in self.model_registry:
+            raise ValueError(f"Model version {version_id} not found in registry")
+        
+        # Update model metadata with promotion info
+        self.model_registry[version_id]['environment'] = environment
+        self.model_registry[version_id]['promoted_at'] = datetime.now().isoformat()
+        
+        # Save updated registry
+        self._save_model_registry()
+        
+        logger.info(f"Model {version_id} promoted to {environment}")
+        
+        return True
+    
+    def get_models_by_version(self, version_pattern: str) -> List[Dict[str, Any]]:
+        """
+        Get models matching a semantic version pattern.
+        
+        Stage 3 enhancement: Semantic version querying with pattern matching.
+        
+        Args:
+            version_pattern: Version pattern (e.g., '1.*', '2.1.*')
+            
+        Returns:
+            List of model dictionaries matching the pattern
+        """
+        import re
+        
+        # Convert pattern to regex (simple implementation)
+        regex_pattern = version_pattern.replace('.', r'\.').replace('*', r'.*')
+        regex_pattern = f'^{regex_pattern}$'
+        
+        matching_models = []
+        
+        for version_id, metadata in self.model_registry.items():
+            version = metadata.get('version', '')
+            if re.match(regex_pattern, version):
+                matching_models.append({
+                    'version_id': version_id,
+                    'version': version,
+                    'metadata': metadata
+                })
+        
+        # Sort by version (basic string sort, could be enhanced)
+        matching_models.sort(key=lambda x: x['version'])
+        
+        logger.info(f"Found {len(matching_models)} models matching pattern '{version_pattern}'")
+        
+        return matching_models
