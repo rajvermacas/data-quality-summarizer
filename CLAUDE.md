@@ -245,3 +245,10 @@ All development tools are configured in `pyproject.toml`:
 - **Type Checking**: mypy with strict configuration
 - **ML Libraries**: LightGBM, scikit-learn for machine learning pipeline
 - **Data Processing**: pandas, numpy for data manipulation
+
+## Memories
+
+- Remember below steps to run the application
+  - Complete end-to-end batch prediction demo
+  - source venv/bin/activate && python scripts/demo_predictions.py
+  - This will train a model, make single predictions, and demonstrate batch processing all in one command!
