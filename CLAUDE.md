@@ -87,16 +87,22 @@ open htmlcov/index.html
 
 ### Running the Application
 
-#### Core Data Summarization
+#### Core Data Summarization (Primary Module)
 ```bash
-# Run the summarizer (fully implemented)
-python -m src.data_quality_summarizer input.csv rule_metadata.json
+# Basic usage - Process CSV file with rule metadata
+python -m src.data_quality_summarizer <csv_file> <rule_metadata_file>
 
-# With custom chunk size
-python -m src.data_quality_summarizer input.csv rule_metadata.json --chunk-size 50000
+# With custom chunk size for memory optimization
+python -m src.data_quality_summarizer input.csv rules.json --chunk-size 50000
 
-# Example with sample data (if available in resources/)
-python -m src.data_quality_summarizer resources/sample_data.csv resources/sample_rules.json
+# With custom output directory
+python -m src.data_quality_summarizer input.csv rules.json --output-dir /custom/path
+
+# Performance monitoring with detailed logging
+python -m src.data_quality_summarizer input.csv rules.json 2>&1 | tee processing.log
+
+# Quick start with sample data
+python -m src sample_input.csv sample_rules.json
 ```
 
 #### ML Pipeline Commands
@@ -107,9 +113,33 @@ python -m src train-model input.csv rule_metadata.json --output-model model.pkl
 # Make single prediction
 python -m src predict --model model.pkl --dataset-uuid uuid123 --rule-code R001 --date 2024-01-15
 
-# Batch predictions from CSV
+# Batch predictions from CSV input
 python -m src batch-predict --model model.pkl --input predictions.csv --output results.csv
 
+# Validate existing model performance
+python -m src validate-model --model model.pkl --test-data test.csv
+```
+
+#### Alternative Entry Points
+```bash
+# Direct module execution (equivalent to primary)
+python -m src <csv_file> <rule_metadata_file>
+
+# Using the main module explicitly
+python -m src.data_quality_summarizer.__main__ input.csv rules.json
+
+# Running with Python interpreter
+python src/data_quality_summarizer/__main__.py input.csv rules.json
+```
+
+#### Development Mode and Logging
+```bash
+# Development mode with detailed logging
+export LOG_LEVEL=DEBUG
+python -m src.data_quality_summarizer input.csv rules.json
+
+# Monitor memory usage with structured logging at DEBUG level
+LOG_LEVEL=DEBUG python -m src.data_quality_summarizer input.csv rules.json
 ```
 
 ## Project Status
