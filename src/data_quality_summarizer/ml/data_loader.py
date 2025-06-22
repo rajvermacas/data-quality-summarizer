@@ -105,3 +105,51 @@ def create_binary_pass_column(parsed_results: List[Optional[Dict[str, Any]]]) ->
                 pass_rate=pass_count/len(binary_column) if binary_column else 0)
     
     return binary_column
+
+
+def normalize_rule_codes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize rule codes to integer format with comprehensive logging.
+    
+    Args:
+        df: DataFrame with 'rule_code' column
+        
+    Returns:
+        DataFrame with normalized integer rule codes
+        
+    Raises:
+        ValueError: If no valid rule codes remain after conversion
+    """
+    from src.data_quality_summarizer.rules import validate_and_convert_rule_code
+    
+    result_df = df.copy()
+    initial_count = len(result_df)
+    
+    # Apply conversion function
+    result_df['rule_code'] = result_df['rule_code'].apply(
+        validate_and_convert_rule_code
+    )
+    
+    # Remove rows with invalid rule codes
+    result_df = result_df.dropna(subset=['rule_code'])
+    final_count = len(result_df)
+    
+    # Log conversion results
+    converted_count = initial_count - final_count
+    if converted_count > 0:
+        logger.warning("Dropped rows with invalid rule codes", 
+                      dropped=converted_count, 
+                      initial=initial_count, 
+                      final=final_count)
+    
+    if final_count == 0:
+        raise ValueError("No valid rule codes found after conversion")
+    
+    # Ensure integer type
+    result_df['rule_code'] = result_df['rule_code'].astype(int)
+    
+    logger.info("Rule code normalization completed", 
+                initial=initial_count, 
+                final=final_count, 
+                success_rate=final_count/initial_count if initial_count > 0 else 0)
+    return result_df

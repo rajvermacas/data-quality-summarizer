@@ -95,6 +95,9 @@ class TestCLIIntegration:
         mock_pipeline.train_model.return_value = {
             'success': True,
             'training_time': 120.5,
+            'samples_trained': 1000,
+            'samples_tested': 200,
+            'memory_peak_mb': 512.0,
             'model_path': 'model.pkl',
             'evaluation_metrics': {'mae': 5.2}
         }
@@ -106,7 +109,7 @@ class TestCLIIntegration:
             test_csv.write_text("dummy,csv,data\n1,2,3")
             
             test_rules = Path(temp_dir) / "rules.json"
-            test_rules.write_text('{"R001": {"rule_name": "Test"}}')
+            test_rules.write_text('{"R001": {"rule_name": "Test Rule", "rule_type": "DATASET", "dimension": "Completeness", "rule_description": "Test rule for CLI", "category": "C1"}}')
             
             model_path = Path(temp_dir) / "model.pkl"
             

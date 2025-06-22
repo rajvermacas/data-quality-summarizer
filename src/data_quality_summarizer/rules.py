@@ -50,6 +50,39 @@ class RuleMetadata:
         return f"RuleMetadata(code={self.rule_code}, name='{self.rule_name}')"
 
 
+def validate_and_convert_rule_code(rule_code: Any) -> Optional[int]:
+    """
+    Validate and convert rule code to integer format.
+    
+    Supports multiple input formats:
+    - Integer: 1, 2, 3 (returned as-is)
+    - String with R prefix: 'R001', 'R002' (converted to 1, 2)
+    - String numeric: '001', '002' (converted to 1, 2)
+    
+    Args:
+        rule_code: Rule code in any supported format
+        
+    Returns:
+        Integer rule code, or None if invalid
+    """
+    if isinstance(rule_code, int):
+        return rule_code
+    elif isinstance(rule_code, str):
+        try:
+            # Handle 'R001' format
+            if rule_code.startswith('R'):
+                return int(rule_code[1:])
+            # Handle direct string numbers
+            else:
+                return int(rule_code)
+        except ValueError:
+            logger.warning(f"Invalid rule code format (cannot convert to int): {rule_code}")
+            return None
+    else:
+        logger.warning(f"Unexpected rule code type: {type(rule_code)}")
+        return None
+
+
 def validate_rule_metadata(rule_code: int, metadata: Dict[str, Any]) -> None:
     """
     Validate rule metadata structure and values.
@@ -119,10 +152,9 @@ def load_rule_metadata(json_file_path: str) -> Dict[int, RuleMetadata]:
     rules_dict = {}
 
     for rule_code_str, metadata in raw_metadata.items():
-        try:
-            rule_code = int(rule_code_str)
-        except ValueError:
-            logger.warning(f"Invalid rule code format: {rule_code_str}")
+        # Use the new conversion function to handle both string and integer formats
+        rule_code = validate_and_convert_rule_code(rule_code_str)
+        if rule_code is None:
             continue
 
         # Validate metadata structure
