@@ -147,3 +147,14 @@ optimization_report.json
 concurrent_test_results.json
 memory_benchmark_*.json
 performance_comparison_*.csv
+
+# Stage 1 feature consistency fix artifacts
+results.csv
+batch_predictions.csv
+feature_consistency_test_*.pkl
+
+# ML pipeline validation artifacts
+validation_data_*.csv
+model_comparison_*.pkl
+feature_engineering_debug_*.json
+categorical_feature_mapping_*.json

@@ -148,33 +148,57 @@ class Predictor:
         """
         Prepare features for model input.
         
+        CRITICAL FIX: This method must use the EXACT same feature selection logic as training
+        to ensure feature count consistency (fixes 9 vs 11 feature mismatch).
+        
         Args:
             features: Dictionary of engineered features
             
         Returns:
             Numpy array formatted for model input
         """
-        # Define expected feature order (based on training)
-        feature_columns = [
-            'day_of_week', 'day_of_month', 'week_of_year', 'month',
-            'lag_1_day', 'lag_2_day', 'lag_7_day',
-            'ma_3_day', 'ma_7_day'
-        ]
+        # Use the SAME feature selection logic as training pipeline
+        # This ensures we include both numeric AND categorical features
+        # Previously this only included 9 numeric features, but training uses 11 (9 + 2 categorical)
         
-        # Extract numeric features in consistent order
-        feature_values = []
+        # Define expected feature order matching training (pipeline.py lines 140-145)
+        feature_columns = [
+            # Numeric features (time-based) - 4 features
+            'day_of_week', 'day_of_month', 'week_of_year', 'month',
+            # Numeric features (lag features) - 3 features  
+            'lag_1_day', 'lag_2_day', 'lag_7_day',
+            # Numeric features (moving averages) - 2 features
+            'ma_3_day', 'ma_7_day',
+            # Categorical features (these were missing!) - 2 features
+            'dataset_uuid', 'rule_code'
+        ]
+        # Total: 11 features (9 numeric + 2 categorical)
+        
+        # Create a DataFrame with the features in the correct order for LightGBM
+        # This approach ensures proper categorical handling
+        feature_row = {}
         for col in feature_columns:
             value = features.get(col, np.nan)
             # Handle NaN values
             if pd.isna(value):
-                value = 0.0  # Default value for missing features
-            feature_values.append(float(value))
+                value = 0.0 if col in ['day_of_week', 'day_of_month', 'week_of_year', 'month',
+                                     'lag_1_day', 'lag_2_day', 'lag_7_day', 'ma_3_day', 'ma_7_day'] else value
+            feature_row[col] = value
         
-        # Convert to 2D array for model input (single row)
-        model_input = np.array([feature_values])
+        # Create DataFrame for proper categorical handling
+        feature_df = pd.DataFrame([feature_row])
+        
+        # Prepare categorical features (same as training)
+        from .model_trainer import prepare_categorical_features_for_prediction
+        categorical_cols = ['dataset_uuid', 'rule_code']
+        prepared_df = prepare_categorical_features_for_prediction(feature_df, categorical_cols, self._model)
+        
+        # For LightGBM prediction, we need to pass the DataFrame directly
+        # LightGBM handles categorical features automatically when they're in category dtype
+        model_input = prepared_df[feature_columns]
         
         logger.debug("Model input prepared",
-                    feature_count=len(feature_values),
+                    feature_count=len(feature_columns),
                     input_shape=model_input.shape)
         
         return model_input
