@@ -63,6 +63,61 @@ class ModelEvaluator:
         
         return metrics
     
+    def evaluate(
+        self, 
+        model, 
+        X_test: pd.DataFrame, 
+        y_test: pd.Series
+    ) -> Dict[str, float]:
+        """
+        Evaluate model performance using test data.
+        
+        This method bridges the gap between pipeline expectations
+        (model + test data) and existing evaluation methods (predictions).
+        
+        Args:
+            model: Trained model with predict() method
+            X_test: Test features DataFrame  
+            y_test: Test target Series
+            
+        Returns:
+            Dictionary containing evaluation metrics
+            
+        Raises:
+            ValueError: If model or data is invalid
+        """
+        try:
+            # Prepare categorical features for prediction if needed
+            X_test_prepared = X_test.copy()
+            
+            # Check if X_test has categorical columns that need preparation
+            categorical_cols = [col for col in ['dataset_uuid', 'rule_code'] 
+                              if col in X_test.columns]
+            
+            if categorical_cols:
+                # Convert categorical columns to category dtype for LightGBM compatibility
+                for col in categorical_cols:
+                    if col in X_test_prepared.columns:
+                        X_test_prepared[col] = X_test_prepared[col].astype('category')
+            
+            # Generate predictions using the model
+            predictions = model.predict(X_test_prepared)
+            
+            # Use existing evaluation method
+            return self.evaluate_predictions(
+                actual=y_test.values,
+                predicted=predictions
+            )
+            
+        except Exception as e:
+            logger.error(f"Model evaluation failed: {e}")
+            return {
+                'mae': float('inf'),
+                'rmse': float('inf'), 
+                'mape': float('inf'),
+                'error': str(e)
+            }
+    
     def evaluate_dataframe(
         self,
         data: pd.DataFrame,

@@ -74,3 +74,29 @@ Thumbs.db
 resources/artifacts/
 *.log
 *.csv
+
+# ML Models and artifacts
+*.pkl
+*.model
+*.joblib
+models/
+model_cache/
+
+# Test artifacts
+test_mini.csv
+test_rules_mini.json
+test_ml_data_*.csv
+test_rules_*.json
+*_test_model.pkl
+validation_model.pkl
+ci_model.pkl
+perf_model.pkl
+memory_test_model.pkl
+batch_test.csv
+batch_results.csv
+performance_test.csv
+performance_report.json
+
+# Temporary testing files
+temp_*/
+tmp_*/

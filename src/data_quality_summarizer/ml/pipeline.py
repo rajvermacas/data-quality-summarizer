@@ -135,7 +135,15 @@ class MLPipeline:
             train_data = feature_data.iloc[:cutoff_idx]
             test_data = feature_data.iloc[cutoff_idx:]
             
-            feature_cols = [col for col in feature_data.columns if col != 'pass_percentage']
+            # Select only numeric and categorical columns suitable for LightGBM
+            # Exclude target variable and non-trainable columns
+            exclude_cols = ['pass_percentage', 'business_date', 'source', 'tenant_id', 'dataset_name']
+            feature_cols = [col for col in feature_data.columns 
+                           if col not in exclude_cols]
+            
+            # Ensure we have categorical columns for LightGBM
+            categorical_cols = ['dataset_uuid', 'rule_code'] if 'dataset_uuid' in feature_cols else []
+            
             X_train = train_data[feature_cols]
             y_train = train_data['pass_percentage']
             X_test = test_data[feature_cols]
@@ -144,9 +152,16 @@ class MLPipeline:
             # Stage 5: Train model
             self._report_progress("Training model", 5, 6)
             self.logger.info("Stage 5: Training LightGBM model...")
+            
+            # Pass categorical columns information to the trainer
+            model_params_with_categorical = {
+                **self.config['model_params'],
+                'categorical_cols': categorical_cols
+            }
+            
             model = self.model_trainer.train(
                 X_train, y_train, 
-                model_params=self.config['model_params']
+                model_params=model_params_with_categorical
             )
             
             # Stage 6: Evaluate model and save

@@ -65,6 +65,63 @@ class ModelTrainer:
         logger.info(f"Model training completed with {len(self.feature_cols)} features")
         return self.model
     
+    def train(
+        self, 
+        X_train: pd.DataFrame, 
+        y_train: pd.Series, 
+        model_params: Optional[Dict[str, Any]] = None
+    ) -> lgb.Booster:
+        """
+        Train method for backward compatibility with pipeline.
+        
+        Adapts the sklearn-style (X, y) interface to the existing fit() interface
+        that expects combined DataFrame with column specifications.
+        
+        Args:
+            X_train: Training features DataFrame
+            y_train: Training target Series
+            model_params: Optional model parameters (merged with defaults)
+            
+        Returns:
+            Trained LightGBM model
+            
+        Raises:
+            ValueError: If data is invalid or insufficient
+        """
+        # Merge provided params with defaults
+        if model_params:
+            combined_params = {**self.params, **model_params}
+            self.params = combined_params
+        
+        # Combine X and y into single DataFrame format expected by fit()
+        train_data = X_train.copy()
+        train_data['pass_percentage'] = y_train
+        
+        # Determine feature and categorical columns
+        # Check if categorical columns are provided in model_params
+        if model_params and 'categorical_cols' in model_params:
+            categorical_cols = model_params['categorical_cols']
+            # Remove categorical_cols from params as it's not a LightGBM parameter
+            model_params_clean = {k: v for k, v in model_params.items() if k != 'categorical_cols'}
+            if model_params_clean:
+                combined_params = {**self.params, **model_params_clean}
+                self.params = combined_params
+        else:
+            # Default behavior - detect categorical columns
+            categorical_cols = [col for col in ['dataset_uuid', 'rule_code'] 
+                               if col in X_train.columns]
+        
+        feature_cols = [col for col in X_train.columns 
+                       if col not in categorical_cols]
+        
+        # Call existing fit method
+        return self.fit(
+            data=train_data,
+            feature_cols=feature_cols,
+            categorical_cols=categorical_cols,
+            target_col='pass_percentage'
+        )
+    
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """
         Make predictions using trained model.
@@ -97,6 +154,18 @@ class ModelTrainer:
         logger.debug(f"Generated {len(predictions)} predictions")
         
         return predictions
+    
+    def save_model(self, model: lgb.Booster, file_path: str) -> None:
+        """
+        Save trained LightGBM model to file.
+        
+        Args:
+            model: Trained LightGBM model
+            file_path: Path to save model file
+        """
+        # Use the existing standalone save_model function
+        save_model(model, file_path)
+        logger.info(f"Model saved to {file_path}")
 
 
 def train_lightgbm_model(

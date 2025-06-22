@@ -44,25 +44,57 @@ class TestMLPipeline:
     def test_train_model_full_pipeline(self):
         """Test complete model training pipeline."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test CSV file
+            # Create test CSV file with sufficient data for training
             test_csv = Path(temp_dir) / "test_data.csv"
-            test_data = pd.DataFrame({
-                'source': ['test'] * 10,
-                'tenant_id': ['tenant1'] * 10,
-                'dataset_uuid': ['uuid1'] * 10,
-                'dataset_name': ['dataset1'] * 10,
-                'rule_code': ['R001'] * 10,
-                'business_date': ['2024-01-01'] * 5 + ['2024-01-02'] * 5,
-                'results': ['{"status": "Pass"}'] * 7 + ['{"status": "Fail"}'] * 3,
-                'dataset_record_count': [1000] * 10,
-                'filtered_record_count': [900] * 10,
-                'level_of_execution': ['dataset'] * 10,
-                'attribute_name': [None] * 10
-            })
+            
+            # Generate enough diverse data to meet the 50 sample minimum
+            data_rows = []
+            for dataset_uuid in ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5']:
+                for rule_code in ['R001', 'R002']:
+                    for date_offset in range(30):  # 30 days of data
+                        date = f"2024-01-{date_offset + 1:02d}"
+                        # Vary the pass/fail rate by dataset and rule
+                        is_pass = (dataset_uuid == 'uuid1' and rule_code == 'R001') or \
+                                 (hash(f"{dataset_uuid}{rule_code}{date}") % 4 != 0)
+                        status = "Pass" if is_pass else "Fail"
+                        
+                        data_rows.append({
+                            'source': 'test',
+                            'tenant_id': 'tenant1',
+                            'dataset_uuid': dataset_uuid,
+                            'dataset_name': f'Dataset {dataset_uuid[-1]}',
+                            'rule_code': rule_code,
+                            'business_date': date,
+                            'results': f'{{"status": "{status}"}}',
+                            'dataset_record_count': 1000,
+                            'filtered_record_count': 900,
+                            'level_of_execution': 'dataset',
+                            'attribute_name': None
+                        })
+            
+            test_data = pd.DataFrame(data_rows)
             test_data.to_csv(test_csv, index=False)
             
-            # Create rule metadata
-            rule_metadata = {'R001': Mock(rule_name='Test Rule')}
+            # Create rule metadata - need both R001 and R002
+            from src.data_quality_summarizer.rules import RuleMetadata
+            rule_metadata = {
+                'R001': RuleMetadata(
+                    rule_code=1,
+                    rule_name='Test Completeness Rule',
+                    rule_type='Completeness',
+                    dimension='Completeness',
+                    rule_description='Test rule for completeness checking',
+                    category='C1'
+                ),
+                'R002': RuleMetadata(
+                    rule_code=2,
+                    rule_name='Test Validity Rule',
+                    rule_type='Validity',
+                    dimension='Validity',
+                    rule_description='Test rule for validity checking',
+                    category='V1'
+                )
+            }
             
             # Test model path
             model_path = Path(temp_dir) / "test_model.pkl"
@@ -75,6 +107,10 @@ class TestMLPipeline:
                 rule_metadata=rule_metadata,
                 output_model_path=str(model_path)
             )
+            
+            # Debug output
+            if not result.get('success'):
+                print(f"Pipeline failed with error: {result.get('error')}")
             
             assert result['success'] is True
             assert 'training_time' in result
