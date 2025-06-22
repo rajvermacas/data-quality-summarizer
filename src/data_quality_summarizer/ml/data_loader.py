@@ -79,6 +79,8 @@ def create_binary_pass_column(parsed_results: List[Optional[Dict[str, Any]]]) ->
     """
     Create binary pass column from parsed results.
     
+    Handles both 'status' and 'result' fields in JSON with case-insensitive matching.
+    
     Args:
         parsed_results: List of parsed JSON dictionaries
         
@@ -92,8 +94,12 @@ def create_binary_pass_column(parsed_results: List[Optional[Dict[str, Any]]]) ->
             # Default to fail for malformed results
             binary_column.append(0)
         else:
+            # Check for both 'status' and 'result' fields (case-insensitive)
             status = result.get('status', '').lower()
-            if status == 'pass':
+            result_field = result.get('result', '').lower()
+            
+            # Consider it a pass if either field indicates pass
+            if status == 'pass' or result_field == 'pass':
                 binary_column.append(1)
             else:
                 binary_column.append(0)
