@@ -36,6 +36,19 @@ def parse_arguments() -> argparse.Namespace:
     if len(sys.argv) > 1 and sys.argv[1] in ml_commands:
         # Use subcommand parsing for ML commands
         return parse_ml_arguments()
+    elif len(sys.argv) > 1 and sys.argv[1].startswith('-'):
+        # Handle options like --help, use original parsing
+        return parse_original_arguments()
+    elif len(sys.argv) > 1 and not Path(sys.argv[1]).exists() and sys.argv[1] not in ['--help', '-h']:
+        # Check if first argument looks like an invalid command
+        potential_command = sys.argv[1]
+        if not potential_command.endswith('.csv') and not potential_command.endswith('.json'):
+            print(f"Error: Unknown command '{potential_command}'", file=sys.stderr)
+            print(f"Available commands: {', '.join(ml_commands)}", file=sys.stderr)
+            print("Or provide CSV and JSON files for data summarization", file=sys.stderr)
+            sys.exit(2)
+        # Fall through to original parsing for file arguments
+        return parse_original_arguments()
     else:
         # Use original parsing for backward compatibility
         return parse_original_arguments()

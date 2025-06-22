@@ -120,3 +120,22 @@ dmypy.json
 .github/artifacts/
 ci_artifacts/
 deployment_logs/
+
+# Stage 4 CLI integration test artifacts
+test_model.pkl
+test_data.csv
+test_rules.json
+input.csv
+output.csv
+batch_test.csv
+batch_results.csv
+
+# Performance monitoring artifacts
+performance_*.json
+memory_usage_*.log
+benchmark_results_*.csv
+
+# Production deployment artifacts
+production_config.json
+model_registry/
+deployment_metadata/

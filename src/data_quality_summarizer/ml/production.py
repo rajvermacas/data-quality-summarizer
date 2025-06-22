@@ -312,10 +312,10 @@ class ProductionUtils:
             'performance_improvement': {}
         }
         
-        # Calculate improvements
+        # Calculate improvements (negative = improvement for MAE)
         if 'mae' in v1_metrics and 'mae' in v2_metrics:
-            # Lower is better for MAE
-            comparison['performance_improvement']['mae'] = v1_metrics['mae'] - v2_metrics['mae']
+            # Lower is better for MAE, so v2 - v1 gives negative when v2 is better
+            comparison['performance_improvement']['mae'] = v2_metrics['mae'] - v1_metrics['mae']
         
         logger.info(f"Model comparison completed: {version_1_id} vs {version_2_id}")
         

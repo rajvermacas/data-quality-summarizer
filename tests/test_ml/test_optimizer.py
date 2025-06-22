@@ -116,7 +116,7 @@ class TestPerformanceOptimizer:
                     np.testing.assert_allclose(
                         original_data[col].values,
                         optimized_data[col].values,
-                        rtol=1e-10
+                        rtol=1e-6  # More reasonable tolerance for dtype optimization
                     )
                 else:
                     # For categorical/object columns, check values match (allow dtype change)

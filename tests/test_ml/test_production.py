@@ -189,12 +189,14 @@ class TestProductionUtils:
     
     def test_model_comparison_capabilities(self):
         """Test model comparison capabilities."""
+        import copy
+        
         # Save two model versions with different performance
-        version_1_metadata = self.model_metadata.copy()
+        version_1_metadata = copy.deepcopy(self.model_metadata)
         version_1_metadata['version'] = '1.0.0'
         version_1_metadata['performance_metrics']['mae'] = 4.5
         
-        version_2_metadata = self.model_metadata.copy()
+        version_2_metadata = copy.deepcopy(self.model_metadata)
         version_2_metadata['version'] = '2.0.0'
         version_2_metadata['performance_metrics']['mae'] = 3.2
         

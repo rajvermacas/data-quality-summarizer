@@ -166,16 +166,16 @@ class TestCLIIntegration:
     @patch('src.data_quality_summarizer.ml.batch_predictor.BatchPredictor')
     def test_cli_batch_predict_execution(self, mock_batch_predictor_class):
         """Test CLI execution of batch-predict command."""
-        # Setup mock batch predictor
-        mock_batch_predictor = Mock()
-        mock_batch_predictor.process_batch_csv.return_value = {
-            'success': True,
-            'predictions_processed': 5,
-            'processing_time': 2.3
-        }
-        mock_batch_predictor_class.return_value = mock_batch_predictor
-        
         with tempfile.TemporaryDirectory() as temp_dir:
+            # Setup mock batch predictor
+            mock_batch_predictor = Mock()
+            mock_batch_predictor.process_batch_csv.return_value = {
+                'success': True,
+                'predictions_processed': 5,
+                'processing_time': 2.3,
+                'output_file': str(Path(temp_dir) / "output.csv")
+            }
+            mock_batch_predictor_class.return_value = mock_batch_predictor
             # Create test files
             model_path = Path(temp_dir) / "model.pkl"
             model_path.write_text("dummy model")
@@ -242,8 +242,9 @@ class TestCLIIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create test files for existing functionality
             test_csv = Path(temp_dir) / "test.csv"
-            test_csv.write_text("source,tenant_id,dataset_uuid,dataset_name,rule_code,business_date,results\n")
-            test_csv.write_text("test,tenant1,uuid1,dataset1,R001,2024-01-01,{\"status\":\"Pass\"}\n", mode='a')
+            csv_content = ("source,tenant_id,dataset_uuid,dataset_name,rule_code,business_date,results\n"
+                          "test,tenant1,uuid1,dataset1,R001,2024-01-01,{\"status\":\"Pass\"}\n")
+            test_csv.write_text(csv_content)
             
             test_rules = Path(temp_dir) / "rules.json"
             test_rules.write_text('{"R001": {"rule_name": "Test Rule"}}')
