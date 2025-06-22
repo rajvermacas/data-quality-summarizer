@@ -180,3 +180,33 @@ bayesian_search_trials_*.json
 traffic_split_analysis_*.csv
 statistical_significance_*.json
 ab_experiment_*.json
+
+# Development session artifacts
+session_artifacts/
+development_logs/
+review_reports/
+validation_results/
+
+# Code quality and analysis artifacts
+.mypy_cache/
+.ruff_cache/
+.bandit/
+.sonar/
+security_scan_*.json
+quality_report_*.html
+
+# Container and deployment artifacts
+.docker/
+docker-compose.override.yml
+.env.local
+.env.production
+kubernetes-local/
+helm-charts/temp/
+
+# Build and packaging artifacts
+.wheel/
+.eggs/
+build/
+dist/
+*.tar.gz
+*.whl
