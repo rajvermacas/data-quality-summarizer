@@ -254,3 +254,51 @@ class ModelValidator:
         logger.info(f"Performance trend: {trend_direction} (significance: {abs(trend_change):.3f})")
         
         return trend_report
+    
+    def validate_model_metadata(self, model, expected_features: List[str]) -> Dict[str, Any]:
+        """
+        Validate model metadata including feature names and types.
+        
+        Stage 2 enhancement: Validates that model expects correct features
+        and provides metadata consistency checking.
+        
+        Args:
+            model: Trained model object
+            expected_features: List of expected feature names
+            
+        Returns:
+            Dictionary containing metadata validation results
+        """
+        logger.info(f"Validating model metadata for {len(expected_features)} expected features")
+        
+        validation_result = {
+            'metadata_valid': True,
+            'expected_features': expected_features,
+            'feature_count_match': True,
+            'validation_timestamp': datetime.now().isoformat(),
+            'issues': []
+        }
+        
+        # For LightGBM models, check feature count
+        try:
+            if hasattr(model, 'num_feature'):
+                model_feature_count = model.num_feature
+                expected_count = len(expected_features)
+                
+                if model_feature_count != expected_count:
+                    validation_result['metadata_valid'] = False
+                    validation_result['feature_count_match'] = False
+                    validation_result['issues'].append(
+                        f"Feature count mismatch: model expects {model_feature_count}, "
+                        f"provided {expected_count}"
+                    )
+                    
+            validation_result['model_feature_count'] = getattr(model, 'num_feature', None)
+                    
+        except Exception as e:
+            validation_result['metadata_valid'] = False
+            validation_result['issues'].append(f"Error validating model metadata: {str(e)}")
+        
+        logger.info(f"Model metadata validation: {'VALID' if validation_result['metadata_valid'] else 'INVALID'}")
+        
+        return validation_result

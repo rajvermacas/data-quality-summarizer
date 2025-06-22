@@ -228,3 +228,232 @@ class BatchPredictor:
             return process.memory_info().rss / (1024 * 1024)
         except Exception:
             return 0.0
+    
+    def process_batch_with_recovery(
+        self,
+        input_file: str,
+        output_file: str,
+        error_recovery_strategy: str = 'continue_on_error'
+    ) -> Dict[str, Any]:
+        """
+        Process batch with enhanced error recovery and progress tracking.
+        
+        Stage 2 enhancement: Provides error-resilient batch predictions that can
+        continue processing despite individual record failures.
+        
+        Args:
+            input_file: Path to input CSV file
+            output_file: Path to output CSV file
+            error_recovery_strategy: Strategy for handling errors ('continue_on_error', 'stop_on_error')
+            
+        Returns:
+            Dictionary containing processing results with error details
+        """
+        try:
+            if not Path(input_file).exists():
+                return {'success': False, 'error': f'Input file not found: {input_file}'}
+            
+            # Load input data
+            input_data = pd.read_csv(input_file)
+            
+            # Validate input
+            validation_result = self.validate_batch_input(input_data)
+            if not validation_result['valid']:
+                return {
+                    'success': False,
+                    'error': 'Input validation failed',
+                    'validation_details': validation_result
+                }
+            
+            results = []
+            errors = []
+            processed = 0
+            
+            self.logger.info(f"Processing {len(input_data)} records with error recovery")
+            
+            for i, row in input_data.iterrows():
+                try:
+                    # Make prediction
+                    prediction = self.predictor.predict(
+                        dataset_uuid=row['dataset_uuid'],
+                        rule_code=row['rule_code'],
+                        business_date=row['business_date']
+                    )
+                    
+                    results.append({
+                        'dataset_uuid': row['dataset_uuid'],
+                        'rule_code': row['rule_code'],
+                        'business_date': row['business_date'],
+                        'predicted_pass_percentage': prediction,
+                        'status': 'success'
+                    })
+                    processed += 1
+                    
+                except Exception as e:
+                    error_record = {
+                        'dataset_uuid': row.get('dataset_uuid', 'unknown'),
+                        'rule_code': row.get('rule_code', 'unknown'),
+                        'business_date': row.get('business_date', 'unknown'),
+                        'error': str(e),
+                        'status': 'error'
+                    }
+                    
+                    if error_recovery_strategy == 'continue_on_error':
+                        results.append(error_record)
+                        errors.append(error_record)
+                    else:  # stop_on_error
+                        return {
+                            'success': False,
+                            'error': f'Processing stopped at record {i}: {str(e)}',
+                            'processed_count': processed,
+                            'failed_record': error_record
+                        }
+            
+            # Save results
+            results_df = pd.DataFrame(results)
+            results_df.to_csv(output_file, index=False)
+            
+            return {
+                'success': True,
+                'total_records': len(input_data),
+                'processed_successfully': processed,
+                'error_count': len(errors),
+                'error_details': errors,
+                'output_file': output_file
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Batch processing with recovery failed: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def validate_batch_input(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Validate batch input data comprehensively.
+        
+        Stage 2 enhancement: Provides comprehensive validation of batch input
+        to ensure data quality before processing.
+        
+        Args:
+            data: Input DataFrame to validate
+            
+        Returns:
+            Dictionary containing validation results
+        """
+        validation_result = {
+            'valid': True,
+            'issues': [],
+            'warning_count': 0,
+            'error_count': 0
+        }
+        
+        # Check required columns
+        required_columns = ['dataset_uuid', 'rule_code', 'business_date']
+        missing_columns = [col for col in required_columns if col not in data.columns]
+        
+        if missing_columns:
+            validation_result['valid'] = False
+            validation_result['error_count'] += 1
+            validation_result['issues'].append({
+                'type': 'error',
+                'message': f'Missing required columns: {missing_columns}'
+            })
+        
+        # Check for empty data
+        if data.empty:
+            validation_result['valid'] = False
+            validation_result['error_count'] += 1
+            validation_result['issues'].append({
+                'type': 'error',
+                'message': 'Input data is empty'
+            })
+            return validation_result
+        
+        # Check for null values in required columns
+        for col in required_columns:
+            if col in data.columns:
+                null_count = data[col].isnull().sum()
+                if null_count > 0:
+                    validation_result['warning_count'] += 1
+                    validation_result['issues'].append({
+                        'type': 'warning',
+                        'message': f'Column {col} has {null_count} null values'
+                    })
+        
+        # Validate date format
+        if 'business_date' in data.columns:
+            try:
+                pd.to_datetime(data['business_date'])
+            except Exception as e:
+                validation_result['valid'] = False
+                validation_result['error_count'] += 1
+                validation_result['issues'].append({
+                    'type': 'error',
+                    'message': f'Invalid date format in business_date: {str(e)}'
+                })
+        
+        self.logger.info(f"Input validation: {'PASSED' if validation_result['valid'] else 'FAILED'} "
+                        f"(errors: {validation_result['error_count']}, warnings: {validation_result['warning_count']})")
+        
+        return validation_result
+    
+    def resume_batch_processing(
+        self,
+        checkpoint_file: str,
+        input_file: str,
+        output_file: str
+    ) -> Dict[str, Any]:
+        """
+        Resume batch processing from a checkpoint.
+        
+        Stage 2 enhancement: Provides resumable batch operations for large datasets
+        that may need to be processed in multiple sessions.
+        
+        Args:
+            checkpoint_file: Path to checkpoint file with progress information
+            input_file: Path to input CSV file
+            output_file: Path to output CSV file
+            
+        Returns:
+            Dictionary containing resumption results
+        """
+        try:
+            if not Path(checkpoint_file).exists():
+                return {
+                    'success': False,
+                    'error': f'Checkpoint file not found: {checkpoint_file}'
+                }
+            
+            # Load checkpoint data
+            import json
+            with open(checkpoint_file, 'r') as f:
+                checkpoint_data = json.load(f)
+            
+            last_processed_index = checkpoint_data.get('last_processed_index', -1)
+            processed_count = checkpoint_data.get('processed_count', 0)
+            
+            # Load input data
+            input_data = pd.read_csv(input_file)
+            
+            # Skip already processed records
+            remaining_data = input_data.iloc[last_processed_index + 1:]
+            
+            if remaining_data.empty:
+                return {
+                    'success': True,
+                    'message': 'All records already processed',
+                    'total_processed': processed_count
+                }
+            
+            self.logger.info(f"Resuming processing from index {last_processed_index + 1}, "
+                           f"{len(remaining_data)} records remaining")
+            
+            # Process remaining data
+            return self.process_batch_with_recovery(
+                input_file=input_file,
+                output_file=output_file,
+                error_recovery_strategy='continue_on_error'
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Resume batch processing failed: {str(e)}")
+            return {'success': False, 'error': str(e)}

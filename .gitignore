@@ -158,3 +158,13 @@ validation_data_*.csv
 model_comparison_*.pkl
 feature_engineering_debug_*.json
 categorical_feature_mapping_*.json
+
+# Stage 2 ML pipeline robustness artifacts
+checkpoint_*.json
+batch_recovery_*.csv
+validation_report_*.json
+training_statistics_*.json
+model_metadata_*.json
+error_recovery_test_*.csv
+resumable_batch_*.csv
+input_validation_test_*.csv

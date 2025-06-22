@@ -155,6 +155,130 @@ class ModelTrainer:
         
         return predictions
     
+    def train_with_validation(
+        self,
+        data: pd.DataFrame,
+        validation_thresholds: Optional[Dict[str, float]] = None
+    ) -> Dict[str, Any]:
+        """
+        Train model with automatic validation after training.
+        
+        Stage 2 enhancement: Provides automatic model quality validation
+        after training to ensure model meets quality thresholds.
+        
+        Args:
+            data: Training data DataFrame with features and target
+            validation_thresholds: Optional quality thresholds for validation
+            
+        Returns:
+            Dictionary containing training results and validation report
+        """
+        from .model_validator import ModelValidator
+        
+        # Default training setup
+        target_col = 'pass_percentage'
+        categorical_cols = [col for col in ['dataset_uuid', 'rule_code'] 
+                           if col in data.columns]
+        feature_cols = [col for col in data.columns 
+                       if col not in categorical_cols + [target_col]]
+        
+        # Collect training statistics
+        self._collect_training_statistics(data, feature_cols + categorical_cols)
+        
+        # Train the model
+        model = self.fit(
+            data=data,
+            feature_cols=feature_cols,
+            categorical_cols=categorical_cols,
+            target_col=target_col
+        )
+        
+        # Perform validation
+        validator = ModelValidator()
+        
+        # Generate predictions for validation
+        X_val = data[feature_cols + categorical_cols]
+        y_true = data[target_col].values
+        y_pred = self.predict(X_val)
+        
+        # Validate model quality
+        quality_report = validator.validate_model_quality(
+            y_true=y_true,
+            y_pred=y_pred,
+            thresholds=validation_thresholds
+        )
+        
+        return {
+            'model': model,
+            'training_completed': True,
+            'validation_report': quality_report,
+            'features_used': len(feature_cols + categorical_cols),
+            'training_samples': len(data)
+        }
+    
+    def get_training_statistics(self) -> Dict[str, Any]:
+        """
+        Get training data statistics for prediction validation.
+        
+        Stage 2 enhancement: Preserves training data statistics that can be
+        used to validate prediction data against training distribution.
+        
+        Returns:
+            Dictionary containing training data statistics
+        """
+        if not hasattr(self, '_training_statistics'):
+            return {
+                'statistics_available': False,
+                'message': 'No training statistics available. Train a model first.'
+            }
+        
+        return self._training_statistics
+    
+    def _collect_training_statistics(self, data: pd.DataFrame, feature_cols: List[str]) -> None:
+        """
+        Collect statistics from training data.
+        
+        Args:
+            data: Training data DataFrame
+            feature_cols: List of feature columns
+        """
+        try:
+            statistics = {
+                'statistics_available': True,
+                'feature_count': len(feature_cols),
+                'sample_count': len(data),
+                'collection_timestamp': pd.Timestamp.now().isoformat()
+            }
+            
+            # Collect statistics for numeric features
+            numeric_features = data[feature_cols].select_dtypes(include=[np.number])
+            if not numeric_features.empty:
+                statistics['numeric_features'] = {
+                    'mean': numeric_features.mean().to_dict(),
+                    'std': numeric_features.std().to_dict(),
+                    'min': numeric_features.min().to_dict(),
+                    'max': numeric_features.max().to_dict()
+                }
+            
+            # Collect statistics for categorical features
+            categorical_features = data[feature_cols].select_dtypes(include=['object', 'category'])
+            if not categorical_features.empty:
+                statistics['categorical_features'] = {}
+                for col in categorical_features.columns:
+                    statistics['categorical_features'][col] = {
+                        'unique_values': data[col].unique().tolist(),
+                        'value_counts': data[col].value_counts().to_dict()
+                    }
+            
+            self._training_statistics = statistics
+            
+        except Exception as e:
+            logger.warning(f"Failed to collect training statistics: {e}")
+            self._training_statistics = {
+                'statistics_available': False,
+                'error': str(e)
+            }
+    
     def save_model(self, model: lgb.Booster, file_path: str) -> None:
         """
         Save trained LightGBM model to file.
