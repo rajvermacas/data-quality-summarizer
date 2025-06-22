@@ -139,3 +139,11 @@ benchmark_results_*.csv
 production_config.json
 model_registry/
 deployment_metadata/
+
+# Stage 5 performance optimization artifacts
+test_verification.csv
+test_rules_verification.json
+optimization_report.json
+concurrent_test_results.json
+memory_benchmark_*.json
+performance_comparison_*.csv

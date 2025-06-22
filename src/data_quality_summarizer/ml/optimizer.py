@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import os
 import psutil
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -161,3 +161,114 @@ class OptimizedPredictor:
         # For optimization, we could implement caching, batch processing, etc.
         # For now, delegate to original predictor
         return self.predictor.predict(data)
+
+
+class DataOptimizer:
+    """
+    Data optimization utilities for memory and performance improvements.
+    
+    This class provides data type optimization, memory reduction techniques,
+    and data structure optimization for improved pipeline performance.
+    """
+    
+    def __init__(self):
+        """Initialize data optimizer."""
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("DataOptimizer initialized")
+    
+    def optimize_memory_usage(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Optimize memory usage of a DataFrame by converting data types.
+        
+        Args:
+            data: Input DataFrame to optimize
+            
+        Returns:
+            Optimized DataFrame with reduced memory footprint
+        """
+        self.logger.info(f"Optimizing memory usage for DataFrame with shape {data.shape}")
+        
+        optimized_data = data.copy()
+        
+        # Track original memory usage
+        original_memory = data.memory_usage(deep=True).sum()
+        
+        # Optimize integer columns
+        for col in optimized_data.select_dtypes(include=['int64', 'int32']).columns:
+            col_min = optimized_data[col].min()
+            col_max = optimized_data[col].max()
+            
+            # Choose appropriate integer type based on range
+            if col_min >= 0:  # Unsigned integers
+                if col_max <= 255:
+                    optimized_data[col] = optimized_data[col].astype('uint8')
+                elif col_max <= 65535:
+                    optimized_data[col] = optimized_data[col].astype('uint16')
+                elif col_max <= 4294967295:
+                    optimized_data[col] = optimized_data[col].astype('uint32')
+            else:  # Signed integers
+                if col_min >= -128 and col_max <= 127:
+                    optimized_data[col] = optimized_data[col].astype('int8')
+                elif col_min >= -32768 and col_max <= 32767:
+                    optimized_data[col] = optimized_data[col].astype('int16')
+                elif col_min >= -2147483648 and col_max <= 2147483647:
+                    optimized_data[col] = optimized_data[col].astype('int32')
+        
+        # Optimize float columns
+        for col in optimized_data.select_dtypes(include=['float64']).columns:
+            # Check if float32 has sufficient precision
+            original_values = optimized_data[col].values
+            float32_values = original_values.astype('float32')
+            
+            # Use relative tolerance for floating point comparison
+            if np.allclose(original_values, float32_values, rtol=1e-6, equal_nan=True):
+                optimized_data[col] = optimized_data[col].astype('float32')
+        
+        # Optimize string/object columns to categorical
+        for col in optimized_data.select_dtypes(include=['object']).columns:
+            try:
+                # Convert to categorical if it reduces memory and has reasonable cardinality
+                unique_count = optimized_data[col].nunique()
+                total_count = len(optimized_data)
+                
+                if total_count > 0 and unique_count / total_count < 0.5:
+                    optimized_data[col] = optimized_data[col].astype('category')
+            except (TypeError, ValueError) as e:
+                # Skip columns that can't be converted to category
+                self.logger.debug(f"Could not convert column {col} to category: {e}")
+                continue
+        
+        # Calculate memory reduction
+        optimized_memory = optimized_data.memory_usage(deep=True).sum()
+        reduction_bytes = original_memory - optimized_memory
+        reduction_percent = (reduction_bytes / original_memory) * 100 if original_memory > 0 else 0
+        
+        self.logger.info(
+            f"Memory optimization completed: "
+            f"reduced by {reduction_bytes / (1024*1024):.2f}MB ({reduction_percent:.1f}%)"
+        )
+        
+        return optimized_data
+    
+    def optimize_categorical_encoding(self, data: pd.DataFrame, categorical_cols: List[str]) -> pd.DataFrame:
+        """
+        Optimize categorical column encoding for better performance.
+        
+        Args:
+            data: Input DataFrame
+            categorical_cols: List of categorical column names
+            
+        Returns:
+            DataFrame with optimized categorical encoding
+        """
+        optimized_data = data.copy()
+        
+        for col in categorical_cols:
+            if col in optimized_data.columns:
+                try:
+                    optimized_data[col] = optimized_data[col].astype('category')
+                    self.logger.debug(f"Converted {col} to categorical type")
+                except Exception as e:
+                    self.logger.warning(f"Could not convert {col} to categorical: {e}")
+        
+        return optimized_data
