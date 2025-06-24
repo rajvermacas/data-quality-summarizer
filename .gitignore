@@ -292,3 +292,10 @@ ui_temp_*/
 ui_session_*/
 uploaded_*_temp/
 processing_temp_*
+
+# Stage 1 UI completion artifacts
+ui_test_artifacts/
+streamlit_progress_logs/
+download_temp_files/
+backend_integration_cache/
+progress_tracker_state/
