@@ -299,3 +299,15 @@ streamlit_progress_logs/
 download_temp_files/
 backend_integration_cache/
 progress_tracker_state/
+
+# Stage 2 Visualization Dashboard artifacts
+plotly_cache/
+chart_render_cache/
+visualization_temp_*/
+dashboard_state_*/
+chart_export_*/
+plotly_temp_files/
+altair_cache/
+visualization_artifacts/
+chart_debug_files/
+dashboard_screenshots/

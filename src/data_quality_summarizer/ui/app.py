@@ -16,6 +16,16 @@ from .components.progress_tracker import ProgressTracker
 from .components.download_manager import create_download_buttons, prepare_download_data
 from .utils.backend_integration import UIProcessingPipeline
 
+# Import visualization page components
+try:
+    from .pages.dashboard import display_dashboard_page
+    from .pages.rule_performance import display_rule_performance_page
+    from .pages.dataset_insights import display_dataset_insights_page
+    VISUALIZATIONS_AVAILABLE = True
+except ImportError:
+    # For testing without visualization dependencies
+    VISUALIZATIONS_AVAILABLE = False
+
 
 def setup_navigation() -> Dict[str, Any]:
     """
@@ -181,6 +191,101 @@ def process_data_files(csv_file, json_file, chunk_size: int = 20000) -> None:
         print("Processing files (Testing Mode)")
 
 
+def display_dashboard_visualization_page() -> None:
+    """Display the dashboard visualization page with sample or processed data."""
+    try:
+        import streamlit as st
+        
+        if not VISUALIZATIONS_AVAILABLE:
+            st.error("❌ Visualization components not available. Please install required dependencies.")
+            return
+        
+        # Check if we have processed data in session state
+        if st.session_state.get('processing_complete', False) and st.session_state.get('processing_results', {}):
+            # Use actual processed data
+            dashboard_data = st.session_state.processing_results
+            display_dashboard_page(dashboard_data)
+        else:
+            # Show sample dashboard with placeholder data
+            st.subheader("📊 Executive Dashboard")
+            st.info("🔄 Upload and process data files to view live dashboard visualizations.")
+            st.markdown("**Dashboard Features:**")
+            st.markdown("- 📈 Quality score gauges and key metrics")
+            st.markdown("- 🥧 Rule category distribution charts")
+            st.markdown("- 📊 Quality trend analysis over time")
+            st.markdown("- 🎯 Executive summary cards")
+            
+            # Sample metrics display
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Rules", "Sample: 25")
+            with col2:
+                st.metric("Total Datasets", "Sample: 5")
+            with col3:
+                st.metric("Overall Pass Rate", "Sample: 94.6%")
+            with col4:
+                st.metric("Latest Execution", "Sample: Today")
+                
+    except ImportError:
+        print("Dashboard Visualization Page (Testing Mode)")
+
+
+def display_rule_performance_visualization_page() -> None:
+    """Display the rule performance visualization page."""
+    try:
+        import streamlit as st
+        
+        if not VISUALIZATIONS_AVAILABLE:
+            st.error("❌ Visualization components not available. Please install required dependencies.")
+            return
+        
+        # Check if we have processed data in session state
+        if st.session_state.get('processing_complete', False) and st.session_state.get('processing_results', {}):
+            # Use actual processed data
+            dashboard_data = st.session_state.processing_results
+            display_rule_performance_page(dashboard_data)
+        else:
+            # Show placeholder for rule performance
+            st.subheader("📈 Rule Performance Analysis")
+            st.info("🔄 Upload and process data files to view rule performance analytics.")
+            st.markdown("**Rule Performance Features:**")
+            st.markdown("- 📊 Rule rankings by fail rate")
+            st.markdown("- 🔥 Performance heatmaps")
+            st.markdown("- 📈 Time series comparisons")
+            st.markdown("- 🎯 Correlation analysis")
+            
+    except ImportError:
+        print("Rule Performance Visualization Page (Testing Mode)")
+
+
+def display_dataset_insights_visualization_page() -> None:
+    """Display the dataset insights visualization page."""
+    try:
+        import streamlit as st
+        
+        if not VISUALIZATIONS_AVAILABLE:
+            st.error("❌ Visualization components not available. Please install required dependencies.")
+            return
+        
+        # Check if we have processed data in session state
+        if st.session_state.get('processing_complete', False) and st.session_state.get('processing_results', {}):
+            # Use actual processed data
+            dashboard_data = st.session_state.processing_results
+            display_dataset_insights_page(dashboard_data)
+        else:
+            # Show placeholder for dataset insights
+            st.subheader("🗂️ Dataset Quality Insights")
+            st.info("🔄 Upload and process data files to view dataset quality insights.")
+            st.markdown("**Dataset Insights Features:**")
+            st.markdown("- 🚦 Health status indicators")
+            st.markdown("- 📊 Quality distribution analysis")
+            st.markdown("- 🏢 Tenant comparison views")
+            st.markdown("- 🎯 Multi-dimensional quality assessment")
+            
+    except ImportError:
+        print("Dataset Insights Visualization Page (Testing Mode)")
+
+
 def main() -> None:
     """
     Main application function that initializes the Streamlit app.
@@ -208,15 +313,16 @@ def main() -> None:
         # Display appropriate page based on navigation
         if nav_state['current_page'] == "Data Upload":
             display_data_upload_page()
+        elif nav_state['current_page'] == "Dashboard":
+            display_dashboard_visualization_page()
+        elif nav_state['current_page'] == "Rule Performance":
+            display_rule_performance_visualization_page()
+        elif nav_state['current_page'] == "Dataset Insights":
+            display_dataset_insights_visualization_page()
         else:
-            # Placeholder for other pages (Stage 2)
+            # Fallback for unknown pages
             st.subheader(f"🚧 {nav_state['current_page']} Page")
-            st.info(f"The {nav_state['current_page']} page will be implemented in Stage 2: Visualization Dashboard.")
-            st.markdown("**Stage 1 Complete Features:**")
-            st.markdown("- ✅ File upload with validation")
-            st.markdown("- ✅ Backend integration")
-            st.markdown("- ✅ Progress tracking")
-            st.markdown("- ✅ Download functionality")
+            st.info("This page is under construction.")
         
     except ImportError:
         # For testing without Streamlit
