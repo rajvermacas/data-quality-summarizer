@@ -11,20 +11,42 @@ import os
 from typing import Dict, Any, Optional
 
 # Import UI components
-from .components.file_uploader import create_file_uploader, validate_csv_file, validate_json_file
-from .components.progress_tracker import ProgressTracker
-from .components.download_manager import create_download_buttons, prepare_download_data
-from .utils.backend_integration import UIProcessingPipeline
+try:
+    from src.data_quality_summarizer.ui.components.file_uploader import create_file_uploader, validate_csv_file, validate_json_file
+    from src.data_quality_summarizer.ui.components.progress_tracker import ProgressTracker
+    from src.data_quality_summarizer.ui.components.download_manager import create_download_buttons, prepare_download_data
+    from src.data_quality_summarizer.ui.utils.backend_integration import UIProcessingPipeline
+except ImportError:
+    try:
+        from components.file_uploader import create_file_uploader, validate_csv_file, validate_json_file
+        from components.progress_tracker import ProgressTracker
+        from components.download_manager import create_download_buttons, prepare_download_data
+        from utils.backend_integration import UIProcessingPipeline
+    except ImportError:
+        # For testing without components
+        create_file_uploader = None
+        validate_csv_file = None
+        validate_json_file = None
+        ProgressTracker = None
+        create_download_buttons = None
+        prepare_download_data = None
+        UIProcessingPipeline = None
 
 # Import visualization page components
 try:
-    from .pages.dashboard import display_dashboard_page
-    from .pages.rule_performance import display_rule_performance_page
-    from .pages.dataset_insights import display_dataset_insights_page
+    from src.data_quality_summarizer.ui.pages.dashboard import display_dashboard_page
+    from src.data_quality_summarizer.ui.pages.rule_performance import display_rule_performance_page
+    from src.data_quality_summarizer.ui.pages.dataset_insights import display_dataset_insights_page
     VISUALIZATIONS_AVAILABLE = True
 except ImportError:
-    # For testing without visualization dependencies
-    VISUALIZATIONS_AVAILABLE = False
+    try:
+        from pages.dashboard import display_dashboard_page
+        from pages.rule_performance import display_rule_performance_page
+        from pages.dataset_insights import display_dataset_insights_page
+        VISUALIZATIONS_AVAILABLE = True
+    except ImportError:
+        # For testing without visualization dependencies
+        VISUALIZATIONS_AVAILABLE = False
 
 
 def setup_navigation() -> Dict[str, Any]:
