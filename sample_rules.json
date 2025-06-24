@@ -1,0 +1,51 @@
+{
+  "R001": {
+    "rule_name": "COMPLETENESS_CHECK",
+    "rule_type": "ATTRIBUTE",
+    "dimension": "Completeness",
+    "rule_description": "Validates that required fields are populated and not null or empty",
+    "category": "C1"
+  },
+  "R002": {
+    "rule_name": "DATE_FORMAT_VALIDATION",
+    "rule_type": "ATTRIBUTE",
+    "dimension": "Correctness", 
+    "rule_description": "Ensures date fields follow standard ISO format (YYYY-MM-DD)",
+    "category": "C1"
+  },
+  "R003": {
+    "rule_name": "RANGE_CHECK",
+    "rule_type": "BUSINESS_RULE",
+    "dimension": "Validity",
+    "rule_description": "Validates that numeric values fall within acceptable business ranges",
+    "category": "C2"
+  },
+  "R004": {
+    "rule_name": "CROSS_FIELD_VALIDATION",
+    "rule_type": "BUSINESS_RULE",
+    "dimension": "Consistency",
+    "rule_description": "Ensures consistency between related fields across records",
+    "category": "C2"
+  },
+  "R005": {
+    "rule_name": "FOREIGN_KEY_CHECK",
+    "rule_type": "DATASET",
+    "dimension": "Integrity",
+    "rule_description": "Validates that foreign key references exist in master data tables",
+    "category": "C3"
+  },
+  "R006": {
+    "rule_name": "DUPLICATE_DETECTION",
+    "rule_type": "DATASET",
+    "dimension": "Uniqueness",
+    "rule_description": "Identifies duplicate records based on business key combinations",
+    "category": "C3"
+  },
+  "R007": {
+    "rule_name": "QUALITY_SCORE",
+    "rule_type": "DATASET",
+    "dimension": "Overall",
+    "rule_description": "Calculates overall data quality score based on multiple rule assessments",
+    "category": "C4"
+  }
+}
