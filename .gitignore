@@ -259,3 +259,4 @@ categorical_consistency_*.json
 prediction_analysis_plots/
 validation_framework_reports/
 scripts/debug*.py
+node_modules/

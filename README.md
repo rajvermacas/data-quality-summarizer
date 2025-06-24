@@ -1,6 +1,6 @@
 # Data Quality Summarizer
 
-**An offline data processing system that transforms large CSV files containing data quality check results into LLM-optimized summary artifacts.**
+**An offline data processing system that transforms large CSV files containing data quality check results into LLM-optimized summary artifacts with machine learning capabilities and a modern React web interface.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](htmlcov/index.html)
@@ -8,11 +8,28 @@
 
 ## 🚀 Features
 
+### Core Data Processing
 - **Memory Efficient**: Processes 100k+ row CSV files using <1GB RAM via chunked streaming
 - **High Performance**: Completes processing in <2 minutes on consumer-grade hardware  
 - **Comprehensive Analytics**: Generates rolling time-window metrics (1-month, 3-month, 12-month)
 - **LLM-Ready Output**: Produces natural language summaries optimized for knowledge base integration
-- **Robust Architecture**: Test-driven development with 90% test coverage
+
+### Machine Learning Pipeline
+- **Predictive Modeling**: LightGBM-based failure prediction models
+- **Feature Engineering**: Automated feature extraction from historical data quality patterns
+- **Model Training & Validation**: Cross-validation with performance metrics
+- **Batch & Single Predictions**: Flexible prediction interfaces for different use cases
+
+### Web User Interface
+- **React-based UI**: Modern, responsive interface built with TypeScript
+- **File Upload**: Drag-and-drop CSV and JSON rule file uploads
+- **Real-time Processing**: Live progress indicators and status updates
+- **Interactive Visualizations**: Charts and graphs using Recharts library
+- **Data Exploration**: Sortable, filterable data tables with export capabilities
+- **ML Integration**: Train models and make predictions directly from the UI
+
+### Architecture & Quality
+- **Robust Architecture**: Test-driven development with 86% test coverage
 - **Production Ready**: Full CLI interface with structured logging and error handling
 
 ## 📋 Table of Contents
@@ -29,11 +46,28 @@
 
 ## ⚡ Quick Start
 
+### Option 1: Web UI (Recommended)
 ```bash
 # Clone and setup
 git clone <repository-url>
 cd data-quality-summarizer
 
+# Install Python dependencies
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+pip install -e .
+
+# Install Node.js dependencies  
+npm install
+
+# Start the web application
+python scripts/start_ui_server.py
+
+# Open browser to http://localhost:8000
+```
+
+### Option 2: Command Line
+```bash
 # Install with dependencies
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
@@ -51,6 +85,7 @@ cat resources/artifacts/nl_all_rows.txt
 
 ### Requirements
 - **Python**: 3.11 or higher
+- **Node.js**: 18+ (for React UI)
 - **Memory**: 1GB+ RAM recommended
 - **Storage**: 100MB+ available space
 

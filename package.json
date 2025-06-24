@@ -1,0 +1,39 @@
+{
+  "name": "data-quality-summarizer",
+  "version": "1.0.0",
+  "description": "**An offline data processing system that transforms large CSV files containing data quality check results into LLM-optimized summary artifacts.**",
+  "main": "index.js",
+  "type": "module",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rajvermacas/data-quality-summarizer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rajvermacas/data-quality-summarizer/issues"
+  },
+  "homepage": "https://github.com/rajvermacas/data-quality-summarizer#readme",
+  "dependencies": {
+    "@types/node": "^24.0.3",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "lucide-react": "^0.523.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^3.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}
