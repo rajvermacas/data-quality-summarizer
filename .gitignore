@@ -259,3 +259,36 @@ categorical_consistency_*.json
 prediction_analysis_plots/
 validation_framework_reports/
 scripts/debug*.py
+
+# Web UI development artifacts
+.streamlit/
+*.streamlit
+ui_cache/
+streamlit_logs/
+ui_session_state/
+uploaded_files/
+temp_uploads/
+ui_artifacts/
+
+# Streamlit specific artifacts
+.streamlit/secrets.toml
+.streamlit/config.toml
+streamlit_config/
+
+# UI testing artifacts
+ui_test_screenshots/
+ui_integration_tests/
+streamlit_test_data/
+ui_validation_reports/
+
+# Frontend development artifacts
+node_modules/
+.npm/
+package-lock.json
+yarn.lock
+
+# UI session and temporary files
+ui_temp_*/
+ui_session_*/
+uploaded_*_temp/
+processing_temp_*

@@ -1,0 +1,1 @@
+"""UI tests package for data quality summarizer web interface."""
