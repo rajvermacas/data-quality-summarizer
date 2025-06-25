@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "mcp__puppeteer__puppeteer_fill"
     ],
     "deny": []
   }

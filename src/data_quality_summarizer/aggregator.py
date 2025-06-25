@@ -367,3 +367,12 @@ class StreamingAggregator:
                 len(metrics.row_data) for metrics in self.accumulator.values()
             ),
         }
+
+    def get_aggregated_data(self) -> Dict:
+        """
+        Get the aggregated data from the accumulator.
+
+        Returns:
+            The accumulator dictionary containing the aggregated data.
+        """
+        return self.accumulator

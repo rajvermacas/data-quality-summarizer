@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import traceback
+import pandas as pd
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +23,7 @@ import uvicorn
 from ..ingestion import CSVIngester
 from ..summarizer import SummaryGenerator
 from ..aggregator import StreamingAggregator
-from ..rules import RuleMetadata
+from ..rules import RuleMetadata, load_rule_metadata
 
 # ML imports with error handling
 try:
@@ -80,6 +81,50 @@ class MLTrainingRequest(BaseModel):
 current_model: Optional[Predictor] = None
 last_processing_result: Optional[ProcessingResult] = None
 
+def convert_aggregated_data_to_summary_format(aggregator, rule_metadata):
+    """
+    Convert AggregationMetrics objects to dictionary format for summarizer.
+    This mirrors the conversion logic from __main__.py.
+    """
+    summary_data = {}
+    for key, metrics in aggregator.accumulator.items():
+        source, tenant_id, dataset_uuid, dataset_name, rule_code = key
+
+        # Get rule metadata
+        rule_info = rule_metadata.get(rule_code)
+        if rule_info is None:
+            logger.warning(f"Rule metadata not found for rule_code: {rule_code}")
+            continue
+
+        # Convert AggregationMetrics to dictionary format
+        summary_entry = {
+            "rule_name": rule_info.rule_name,
+            "rule_type": rule_info.rule_type,
+            "dimension": rule_info.dimension,
+            "rule_description": rule_info.rule_description,
+            "category": rule_info.category,
+            "business_date_latest": metrics.business_date_latest,
+            "dataset_record_count_latest": metrics.dataset_record_count_latest,
+            "filtered_record_count_latest": metrics.filtered_record_count_latest,
+            "pass_count_total": metrics.pass_count_total,
+            "fail_count_total": metrics.fail_count_total,
+            "pass_count_1m": metrics.pass_count_1m,
+            "fail_count_1m": metrics.fail_count_1m,
+            "pass_count_3m": metrics.pass_count_3m,
+            "fail_count_3m": metrics.fail_count_3m,
+            "pass_count_12m": metrics.pass_count_12m,
+            "fail_count_12m": metrics.fail_count_12m,
+            "fail_rate_total": metrics.fail_rate_total,
+            "fail_rate_1m": metrics.fail_rate_1m,
+            "fail_rate_3m": metrics.fail_rate_3m,
+            "fail_rate_12m": metrics.fail_rate_12m,
+            "trend_flag": metrics.trend_flag,
+            "last_execution_level": metrics.last_execution_level,
+        }
+        summary_data[key] = summary_entry
+    
+    return summary_data
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
@@ -129,10 +174,8 @@ async def process_files(
                 aggregator = StreamingAggregator()
                 summarizer = SummaryGenerator(temp_dir)
                 
-                # Load rule metadata using a simple approach for demo
-                import json
-                with open(rules_path, 'r') as f:
-                    rule_metadata = json.load(f)
+                # Load rule metadata properly using the rules module
+                rule_metadata = load_rule_metadata(str(rules_path))
                 logger.info(f"Loaded {len(rule_metadata)} rules")
                 
                 # Process data
@@ -140,19 +183,31 @@ async def process_files(
                 start_time = time.time()
                 
                 total_rows = 0
+                row_failures = 0
                 for chunk in ingestion_engine.read_csv_chunks(str(csv_path)):
                     total_rows += len(chunk)
-                    aggregator.process_chunk(chunk)
+                    for _, row in chunk.iterrows():
+                        try:
+                            aggregator.process_row(row)
+                        except Exception as e:
+                            row_failures += 1
+                            logger.warning(f"Failed to process row: {str(e)}")
                 
-                # Generate summary
-                summary_data = summarizer.generate_csv_summary(
-                    aggregator.get_aggregated_data(),
-                    rule_metadata
-                )
+                # Finalize aggregation - this is crucial step that was missing!
+                aggregator.finalize_aggregation()
                 
-                nl_summary = summarizer.generate_natural_language_summary(
-                    summary_data
-                )
+                # Convert aggregated data to summary format with rule metadata enrichment
+                converted_data = convert_aggregated_data_to_summary_format(aggregator, rule_metadata)
+                logger.info(f"Converted {len(converted_data)} entries for export")
+
+                # Generate summary artifacts
+                summary_csv_path = summarizer.generate_csv(converted_data)
+                summary_df = pd.read_csv(summary_csv_path)
+                summary_data = summary_df.to_dict(orient='records')
+
+                nl_summary_path = summarizer.generate_nl_sentences(converted_data)
+                with open(nl_summary_path, 'r') as f:
+                    nl_summary = f.read().splitlines()
                 
                 processing_time = time.time() - start_time
                 
@@ -161,7 +216,7 @@ async def process_files(
                 unique_rules = len(set(row['rule_code'] for row in summary_data))
                 
                 # Get date range
-                dates = [row['latest_business_date'] for row in summary_data if row['latest_business_date']]
+                dates = [row['business_date_latest'] for row in summary_data if row['business_date_latest']]
                 time_range = {
                     "start_date": min(dates) if dates else "",
                     "end_date": max(dates) if dates else ""

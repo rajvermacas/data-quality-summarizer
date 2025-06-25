@@ -48,10 +48,7 @@ def sample_rules_content():
 @pytest.fixture
 def mock_processing_components():
     """Mock the core processing components."""
-    with patch('src.data_quality_summarizer.ui.backend_integration.CSVIngestionEngine') as mock_ingestion, \
-         patch('src.data_quality_summarizer.ui.backend_integration.RuleMetadataLoader') as mock_rule_loader, \
-         patch('src.data_quality_summarizer.ui.backend_integration.StreamingDataAggregator') as mock_aggregator, \
-         patch('src.data_quality_summarizer.ui.backend_integration.DataQualitySummarizer') as mock_summarizer:
+    with patch('src.data_quality_summarizer.ui.backend_integration.CSVIngester') as mock_ingestion,         patch('src.data_quality_summarizer.ui.backend_integration.RuleMetadata') as mock_rule_loader,         patch('src.data_quality_summarizer.ui.backend_integration.StreamingAggregator') as mock_aggregator,         patch('src.data_quality_summarizer.ui.backend_integration.SummaryGenerator') as mock_summarizer:
         
         # Configure mocks
         mock_ingestion_instance = Mock()
