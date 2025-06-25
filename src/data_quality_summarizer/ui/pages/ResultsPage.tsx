@@ -16,27 +16,70 @@ interface ResultsPageProps {
 
 export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, onViewMLPipeline }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'table' | 'natural-language'>('overview')
+  
+  // Debug logging
+  console.log('ResultsPage received data:', {
+    summary_data_length: result?.summary_data?.length || 0,
+    unique_datasets: result?.unique_datasets,
+    unique_rules: result?.unique_rules,
+    processing_time: result?.processing_time_seconds,
+    memory_usage: result?.memory_usage_mb
+  })
 
   const calculateMetrics = () => {
-    const totalRules = result.summary_data.length
-    const highRiskRules = result.summary_data.filter(row => row.risk_level === 'HIGH').length
-    const improvementNeeded = result.summary_data.filter(row => row.improvement_needed).length
-    
-    const avgFailRate = result.summary_data.reduce((sum, row) => sum + row.overall_fail_rate, 0) / totalRules
-    const worstFailRate = Math.max(...result.summary_data.map(row => row.overall_fail_rate))
-    
-    const totalFailures = result.summary_data.reduce((sum, row) => sum + row.total_failures, 0)
-    const totalPasses = result.summary_data.reduce((sum, row) => sum + row.total_passes, 0)
+    const summaryData = result.summary_data || []
+    const totalRules = summaryData.length
+
+    if (totalRules === 0) {
+      return {
+        totalRules: 0,
+        highRiskRules: 0,
+        improvementNeeded: 0,
+        avgFailRate: 0,
+        worstFailRate: 0,
+        totalFailures: 0,
+        totalPasses: 0,
+        overallHealthScore: 100,
+      }
+    }
+
+    const highRiskRules = summaryData.filter(row => row.risk_level === 'HIGH').length
+    const improvementNeeded = summaryData.filter(row => row.improvement_needed).length
+
+    const totalFailRate = summaryData.reduce((sum, row) => {
+      const failRate = parseFloat(row.overall_fail_rate as any)
+      return sum + (isNaN(failRate) ? 0 : failRate)
+    }, 0)
+    const avgFailRate = totalRules > 0 ? totalFailRate / totalRules : 0
+
+    const failRates = summaryData.map(row => {
+      const failRate = parseFloat(row.overall_fail_rate as any)
+      return isNaN(failRate) ? 0 : failRate
+    })
+    const worstFailRate = failRates.length > 0 ? Math.max(...failRates) : 0
+
+    const totalFailures = summaryData.reduce((sum, row) => {
+      const failures = parseInt(row.total_failures as any, 10)
+      return sum + (isNaN(failures) ? 0 : failures)
+    }, 0)
+
+    const totalPasses = summaryData.reduce((sum, row) => {
+      const passes = parseInt(row.total_passes as any, 10)
+      return sum + (isNaN(passes) ? 0 : passes)
+    }, 0)
+
+    const validAvgFailRate = isNaN(avgFailRate) ? 0 : avgFailRate
+    const healthScore = Math.round((1 - validAvgFailRate) * 100)
 
     return {
       totalRules,
       highRiskRules,
       improvementNeeded,
-      avgFailRate,
+      avgFailRate: validAvgFailRate,
       worstFailRate,
       totalFailures,
       totalPasses,
-      overallHealthScore: Math.round((1 - avgFailRate) * 100)
+      overallHealthScore: isNaN(healthScore) ? 100 : healthScore,
     }
   }
 
@@ -44,6 +87,12 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
 
   const downloadSummary = (format: 'csv' | 'txt') => {
     if (format === 'csv') {
+      // Check if we have data to download
+      if (!result.summary_data || result.summary_data.length === 0) {
+        alert('No data available to download')
+        return
+      }
+      
       const headers = Object.keys(result.summary_data[0]).join(',')
       const csvContent = [
         headers,
@@ -60,6 +109,12 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
       link.click()
       URL.revokeObjectURL(url)
     } else {
+      // Check if we have natural language summary
+      if (!result.nl_summary || result.nl_summary.length === 0) {
+        alert('No natural language summary available to download')
+        return
+      }
+      
       const content = result.nl_summary.join('\n')
       const blob = new Blob([content], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
@@ -179,22 +234,34 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
             <div className="summary-cards">
               <div className="summary-card">
                 <h3>Processing Summary</h3>
-                <ul>
-                  <li><strong>Total Rows Processed:</strong> {result.total_rows_processed.toLocaleString()}</li>
-                  <li><strong>Time Range:</strong> {result.time_range.start_date} to {result.time_range.end_date}</li>
-                  <li><strong>Average Fail Rate:</strong> {(metrics.avgFailRate * 100).toFixed(2)}%</li>
-                  <li><strong>Worst Fail Rate:</strong> {(metrics.worstFailRate * 100).toFixed(2)}%</li>
-                </ul>
+                {metrics.totalRules > 0 ? (
+                  <ul>
+                    <li><strong>Total Rows Processed:</strong> {result.total_rows_processed.toLocaleString()}</li>
+                    <li><strong>Time Range:</strong> {result.time_range.start_date || 'N/A'} to {result.time_range.end_date || 'N/A'}</li>
+                    <li><strong>Average Fail Rate:</strong> {(metrics.avgFailRate * 100).toFixed(2)}%</li>
+                    <li><strong>Worst Fail Rate:</strong> {(metrics.worstFailRate * 100).toFixed(2)}%</li>
+                  </ul>
+                ) : (
+                  <p className="empty-state">No data available. Process a file to see summary statistics.</p>
+                )}
               </div>
 
               <div className="summary-card">
                 <h3>Quality Insights</h3>
-                <ul>
-                  <li><strong>Total Failures:</strong> {metrics.totalFailures.toLocaleString()}</li>
-                  <li><strong>Total Passes:</strong> {metrics.totalPasses.toLocaleString()}</li>
-                  <li><strong>Rules Needing Improvement:</strong> {metrics.improvementNeeded}</li>
-                  <li><strong>Overall Success Rate:</strong> {((metrics.totalPasses / (metrics.totalPasses + metrics.totalFailures)) * 100).toFixed(2)}%</li>
-                </ul>
+                {metrics.totalRules > 0 ? (
+                  <ul>
+                    <li><strong>Total Failures:</strong> {metrics.totalFailures.toLocaleString()}</li>
+                    <li><strong>Total Passes:</strong> {metrics.totalPasses.toLocaleString()}</li>
+                    <li><strong>Rules Needing Improvement:</strong> {metrics.improvementNeeded}</li>
+                    <li><strong>Overall Success Rate:</strong> {
+                      (metrics.totalPasses + metrics.totalFailures) > 0 
+                        ? ((metrics.totalPasses / (metrics.totalPasses + metrics.totalFailures)) * 100).toFixed(2) 
+                        : '0.00'
+                    }%</li>
+                  </ul>
+                ) : (
+                  <p className="empty-state">No quality insights available. Process a file to see detailed metrics.</p>
+                )}
               </div>
             </div>
 
@@ -476,6 +543,16 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
 
         .nl-sentence:last-child {
           margin-bottom: 0;
+        }
+
+        .empty-state {
+          color: #666;
+          font-style: italic;
+          padding: 20px;
+          text-align: center;
+          background: #f8f9fa;
+          border-radius: 4px;
+          margin: 0;
         }
 
         @media (max-width: 768px) {

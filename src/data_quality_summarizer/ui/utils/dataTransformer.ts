@@ -131,8 +131,18 @@ export function calculateExecutionConsistency(
  * - Runtime validation
  */
 export function transformSummaryData(apiData: ApiSummaryRow[], skipValidation = false): SummaryRow[] {
+  // Handle null/undefined input
+  if (!apiData) {
+    return []
+  }
+  
   // Validate the data if not skipped (useful for testing)
   const validatedData = skipValidation ? apiData : validateApiSummaryData(apiData)
+  
+  // Handle empty array
+  if (validatedData.length === 0) {
+    return []
+  }
   
   return validatedData.map(row => {
     // Calculate derived fields

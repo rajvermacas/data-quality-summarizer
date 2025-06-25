@@ -26,7 +26,7 @@ export const SummaryCharts: React.FC<SummaryChartsProps> = ({ data }) => {
 
   const categoryChartData = Object.values(ruleCategoryData).map((item: any) => ({
     ...item,
-    failRate: item.totalFailures / (item.totalFailures + item.totalPasses) * 100
+    failRate: (item.totalFailures + item.totalPasses) > 0 ? (item.totalFailures / (item.totalFailures + item.totalPasses)) * 100 : 0
   }))
 
   const riskLevelData = data.reduce((acc, row) => {

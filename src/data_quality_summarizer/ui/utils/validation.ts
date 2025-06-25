@@ -85,10 +85,23 @@ export function validateApiSummaryRow(data: unknown): ApiSummaryRow {
  * Returns the validated data or throws if any row is invalid.
  */
 export function validateApiSummaryData(data: unknown[]): ApiSummaryRow[] {
+  // Handle null/undefined/non-array input
+  if (!data || !Array.isArray(data)) {
+    console.warn('validateApiSummaryData: Invalid input, expected array but got:', data)
+    return []
+  }
+  
+  // Handle empty array
+  if (data.length === 0) {
+    console.log('validateApiSummaryData: Empty array provided')
+    return []
+  }
+  
   return data.map((row, index) => {
     try {
       return validateApiSummaryRow(row)
     } catch (error) {
+      console.error(`Validation failed for row ${index}:`, error)
       throw new Error(`Validation failed for row ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   })

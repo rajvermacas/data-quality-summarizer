@@ -44,11 +44,24 @@ function App() {
 
       const apiResult: ApiProcessingResult = await response.json()
       
+      // Debug logging
+      console.log('API Response:', {
+        summary_data_length: apiResult.summary_data?.length || 0,
+        nl_summary_length: apiResult.nl_summary?.length || 0,
+        unique_datasets: apiResult.unique_datasets,
+        unique_rules: apiResult.unique_rules
+      })
+      
       // Transform the API response to UI-friendly format
       const transformedResult: ProcessingResult = {
         ...apiResult,
         summary_data: transformSummaryData(apiResult.summary_data)
       }
+      
+      console.log('Transformed Result:', {
+        summary_data_length: transformedResult.summary_data?.length || 0,
+        first_row: transformedResult.summary_data?.[0] || null
+      })
       
       setProcessingResult(transformedResult)
       setProcessingStatus({
