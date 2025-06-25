@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Data Quality Summarizer with ML Pipeline** - an offline data processing system that ingests large CSV files (~100k rows) containing data quality check results and produces both LLM-optimized summary artifacts and predictive ML models. The system combines traditional data summarization with machine learning capabilities for predictive data quality modeling. Designed for consumer-grade machines (<8GB RAM) and follows a strict test-driven development approach.
+This is a **Data Quality Summarizer with ML Pipeline and React UI** - an offline data processing system that ingests large CSV files (~100k rows) containing data quality check results and produces both LLM-optimized summary artifacts and predictive ML models. The system combines traditional data summarization with machine learning capabilities and a modern React web interface for user interaction. Designed for consumer-grade machines (<8GB RAM) and follows a strict test-driven development approach.
 
 ## Architecture
 
@@ -33,12 +33,23 @@ The system implements a **streaming aggregation pipeline** with the following ke
 - `exceptions.py` - Custom ML pipeline exceptions
 - `utils.py` - ML utility functions and helpers
 
+### React UI Modules (src/data_quality_summarizer/ui/)
+- `App.tsx` - Main React application with routing and state management
+- `main.tsx` - React application entry point
+- `backend_integration.py` - FastAPI server providing REST API for UI
+- `pages/` - React page components (FileUpload, Processing, Results, MLPipeline)
+- `components/` - Reusable React components (DataTable, FileUpload, ProgressBar)
+- `visualizations/` - Chart components using Recharts library
+- `types/common.ts` - TypeScript type definitions
+- `index.css` - Global styles and CSS
+
 ### Data Flow
 1. **Chunked Ingestion**: Reads CSV in 20k-row chunks to maintain <1GB memory usage
 2. **Streaming Aggregation**: Groups by `(source, tenant_id, dataset_uuid, dataset_name, rule_code)` 
 3. **Time Window Analysis**: Calculates rolling metrics for 1-month, 3-month, 12-month periods
 4. **Artifact Generation**: Produces structured CSV and natural language summaries
 5. **ML Pipeline**: Optionally trains LightGBM models for predictive data quality monitoring
+6. **Web UI Integration**: FastAPI backend serves React frontend with REST API endpoints
 
 ### Key Data Schemas
 
@@ -68,11 +79,32 @@ pip install -e .
 
 # Install development dependencies for testing/linting
 pip install -e ".[dev]"
+
+# Install Node.js dependencies for React UI
+npm install
+```
+
+### Web UI Commands
+```bash
+# Start production server (recommended for most users)
+python scripts/start_ui_server.py
+
+# Start development servers (React dev server + FastAPI backend)
+python scripts/start_ui_server.py dev
+
+# Build React app for production
+npm run build
+
+# Start only React development server (port 3000)
+npm run dev
+
+# Preview production build
+npm run preview
 ```
 
 ### Testing
 ```bash
-# Run all tests with coverage (configured in pyproject.toml)
+# Run all Python tests with coverage (configured in pyproject.toml)
 python -m pytest
 
 # Run with detailed coverage report
@@ -81,11 +113,46 @@ python -m pytest --cov=src --cov-report=term-missing --cov-report=html
 # Run specific test file
 python -m pytest tests/test_ingestion.py
 
+# Run ML pipeline tests specifically
+python -m pytest tests/test_ml/
+
+# Run UI backend tests
+python -m pytest tests/test_ui/
+
 # View HTML coverage report (opens in browser)
 open htmlcov/index.html
+
+# Note: No frontend JS/TS tests currently configured
+```
+
+### Code Quality
+```bash
+# Python formatting
+black src/ tests/
+
+# Python linting  
+flake8 src/ tests/
+
+# Python type checking
+mypy src/
+
+# Run all Python quality checks
+black src/ tests/ && flake8 src/ tests/ && mypy src/
+
+# TypeScript type checking
+npx tsc --noEmit
 ```
 
 ### Running the Application
+
+#### Web UI (Recommended for Most Users)
+```bash
+# Complete end-to-end web interface
+python scripts/start_ui_server.py
+
+# Access at: http://localhost:8000
+# Features: File upload, real-time processing, data visualization, ML pipeline
+```
 
 #### Core Data Summarization (Primary Module)
 ```bash
@@ -153,10 +220,19 @@ This project is **production-ready** with all planned features implemented. Key 
 
 ## Development Guidelines
 
+### Dual Architecture (Python + React)
+The project maintains a clean separation between:
+- **Backend**: Python-based data processing, ML pipeline, and FastAPI server
+- **Frontend**: React/TypeScript UI with Vite build system
+- **Integration**: REST API endpoints connecting UI to backend services
+- **Development**: Both can be developed independently or together
+
 ### Performance Requirements
 - **Runtime**: <2 minutes for 100k rows on 4-core laptop
 - **Memory**: <1GB peak usage
 - **Output Size**: Summary CSV <2MB typical
+- **UI Response**: <2 seconds for typical file uploads
+- **API Endpoints**: <5 seconds for processing requests
 
 ### Test-Driven Development Stages
 The project follows a 5-stage TDD approach (all stages completed):
@@ -238,17 +314,51 @@ Each summary row generates an LLM-optimized sentence following this template:
 - **Performance Issues**: Monitor memory usage with structured logging at DEBUG level
 
 ### Development Dependencies
-All development tools are configured in `pyproject.toml`:
+All development tools are configured in `pyproject.toml` and `package.json`:
+
+**Python Dependencies:**
 - **Testing**: pytest with coverage reporting
 - **Formatting**: black with 88-character line length  
 - **Linting**: flake8 with E203/W503 exceptions
 - **Type Checking**: mypy with strict configuration
 - **ML Libraries**: LightGBM, scikit-learn for machine learning pipeline
 - **Data Processing**: pandas, numpy for data manipulation
+- **Web Framework**: FastAPI, uvicorn for REST API server
+
+**Node.js Dependencies:**
+- **Build System**: Vite with React plugin
+- **Framework**: React 19.1.0 with TypeScript
+- **UI Components**: Recharts for data visualization
+- **Icons**: Lucide React for modern icons
+- **Type Checking**: TypeScript with strict configuration
+
+## Key Architectural Patterns
+
+### FastAPI Backend Integration
+The React UI connects to the Python backend through REST API endpoints:
+- `/api/process` - Upload and process CSV/rules files
+- `/api/ml/train` - Train ML models from processed data
+- `/api/ml/predict` - Single predictions
+- `/api/ml/batch-predict` - Batch predictions
+- `/api/health` - Health check endpoint
+
+### React State Management
+The UI uses simple React state with TypeScript:
+- `App.tsx` manages global state and routing
+- Page components handle local state
+- Form data and files processed via FormData API
+- Real-time progress tracking during processing
+
+### Build and Deployment Architecture
+- **Development**: Vite dev server (port 3000) + FastAPI (port 8000)
+- **Production**: FastAPI serves built React static files
+- **Proxy**: React dev server proxies `/api` requests to FastAPI
+- **Static Files**: Built React app served from `dist/ui/`
 
 ## Memories
 
-- Remember below steps to run the application
-  - Complete end-to-end batch prediction demo
-  - source venv/bin/activate && python scripts/demo_predictions.py
-  - This will train a model, make single predictions, and demonstrate batch processing all in one command!
+- Remember these commands to run the application:
+  - **Web UI**: `python scripts/start_ui_server.py` (recommended)
+  - **CLI Demo**: `source venv/bin/activate && python scripts/demo_predictions.py`
+  - **Development**: `python scripts/start_ui_server.py dev` (for React/FastAPI dev)
+- The UI command is: `npm run dev` (React only) or use the Python script for full stack
