@@ -259,4 +259,50 @@ categorical_consistency_*.json
 prediction_analysis_plots/
 validation_framework_reports/
 scripts/debug*.py
+
+# Node.js and React Testing Infrastructure
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# React Testing and Build Artifacts
+coverage/
+.nyc_output
+*.lcov
+jest_coverage/
+test-results/
+.jest-cache/
+
+# Vite Build Artifacts
+dist/
+*.local
+.vite/
+
+# React Development Artifacts
+*.tsbuildinfo
+.eslintcache
+
+# UI Test Artifacts
+ui_test_screenshots/
+visual_regression_screenshots/
+test_snapshots/
+__snapshots__/
+
+# Jest Configuration Debugging
+jest-setup-debug.log
+test-environment-debug.log
+
+# TypeScript Output
+*.d.ts.map
+*.js.map
+
+# Temporary UI Development Files
+ui_dev_temp/
+component_sandbox/
+chart_test_data/
+
+# Package Lock Files (for development)
+# Note: Keeping package-lock.json tracked for dependency consistency
