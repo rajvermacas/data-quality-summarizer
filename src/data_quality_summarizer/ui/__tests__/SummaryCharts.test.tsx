@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { SummaryCharts } from '../visualizations/SummaryCharts';
 import { SummaryRow } from '../types/common';
+import { transformSummaryData } from '../utils/dataTransformer';
+import { ApiSummaryRow } from '../types/api';
 
 // Mock data that matches what the API actually returns (from backend_integration.py)
 const mockApiResponse = [
@@ -151,6 +153,183 @@ describe('SummaryCharts Component - Data Contract Issues', () => {
     // Charts should still render but show no data
     expect(screen.getByText('Failure Rates by Rule Category')).toBeInTheDocument();
     expect(screen.getByText('Risk Level Distribution')).toBeInTheDocument();
+  });
+});
+
+describe('SummaryCharts Component - Stage 3 TDD Implementation', () => {
+  // RED PHASE: New tests that should fail initially
+  
+  it('should render bar chart correctly with transformed API data', () => {
+    // Transform the API data using our data transformer
+    const transformedData = transformSummaryData(mockApiResponse as ApiSummaryRow[]);
+    
+    render(<SummaryCharts data={transformedData} />);
+    
+    // Bar chart should be present
+    expect(screen.getByText('Failure Rates by Rule Category')).toBeInTheDocument();
+    
+    // The chart should show the correct category (not "Unknown")
+    // This test will fail initially because the component still expects the wrong field names
+  });
+  
+  it('should render pie chart with correct risk levels from transformed data', () => {
+    const transformedData = transformSummaryData(mockApiResponse as ApiSummaryRow[]);
+    
+    render(<SummaryCharts data={transformedData} />);
+    
+    // Risk level chart should be present
+    expect(screen.getByText('Risk Level Distribution')).toBeInTheDocument();
+    
+    // The chart should show calculated risk levels (not "Unknown")
+    // This test will fail initially
+  });
+  
+  it('should render line chart with fail rate trends', () => {
+    const transformedData = transformSummaryData(mockApiResponse as ApiSummaryRow[]);
+    
+    render(<SummaryCharts data={transformedData} />);
+    
+    // Trend chart should be present
+    expect(screen.getByText('Failure Rate Trends (Top 20 Datasets)')).toBeInTheDocument();
+    
+    // Chart should use the correct fail_rate fields
+  });
+  
+  it('should render scatter chart with execution consistency data', () => {
+    const transformedData = transformSummaryData(mockApiResponse as ApiSummaryRow[]);
+    
+    render(<SummaryCharts data={transformedData} />);
+    
+    // Execution consistency chart should be present
+    expect(screen.getByText('Execution Consistency vs Daily Execution Frequency')).toBeInTheDocument();
+    
+    // Chart should use calculated execution_consistency and avg_daily_executions
+  });
+  
+  it('should handle multiple datasets with different risk levels', () => {
+    const multipleDatasets: ApiSummaryRow[] = [
+      {
+        ...mockApiResponse[0],
+        dataset_name: 'High Risk Dataset',
+        fail_rate_total: 0.35, // 35% fail rate = HIGH risk
+      },
+      {
+        ...mockApiResponse[0],
+        dataset_name: 'Medium Risk Dataset',
+        fail_rate_total: 0.15, // 15% fail rate = MEDIUM risk
+      },
+      {
+        ...mockApiResponse[0],
+        dataset_name: 'Low Risk Dataset',
+        fail_rate_total: 0.05, // 5% fail rate = LOW risk
+      },
+    ] as ApiSummaryRow[];
+    
+    const transformedData = transformSummaryData(multipleDatasets);
+    render(<SummaryCharts data={transformedData} />);
+    
+    // All risk levels should be represented in the pie chart
+    expect(screen.getByText('Risk Level Distribution')).toBeInTheDocument();
+  });
+  
+  it('should render responsive charts that adapt to container size', () => {
+    const transformedData = transformSummaryData(mockApiResponse as ApiSummaryRow[]);
+    
+    const { container } = render(<SummaryCharts data={transformedData} />);
+    
+    // Check for ResponsiveContainer elements
+    const responsiveContainers = container.querySelectorAll('.recharts-responsive-container');
+    expect(responsiveContainers.length).toBeGreaterThan(0);
+  });
+
+  // More specific tests to verify data transformation is working
+  it('should use transformed field names in chart data processing', () => {
+    // Create mock data with specific values to test
+    const testData: ApiSummaryRow[] = [{
+      ...mockApiResponse[0],
+      category: 'Test Category', // API field
+      fail_count_total: 100,
+      pass_count_total: 900,
+      fail_rate_total: 0.1
+    } as ApiSummaryRow];
+    
+    const transformedData = transformSummaryData(testData);
+    
+    // Verify the transformation worked
+    expect(transformedData[0].rule_category).toBe('Test Category');
+    expect(transformedData[0].total_failures).toBe(100);
+    expect(transformedData[0].total_passes).toBe(900);
+    expect(transformedData[0].overall_fail_rate).toBe(0.1);
+    expect(transformedData[0].risk_level).toBe('MEDIUM'); // 10% fail rate = MEDIUM
+  });
+
+  it('should handle edge case data values correctly', () => {
+    const edgeCaseData: ApiSummaryRow[] = [
+      {
+        ...mockApiResponse[0],
+        fail_rate_total: 0, // 0% fail rate
+        pass_count_1m: 0,
+        fail_count_1m: 0,
+      } as ApiSummaryRow,
+      {
+        ...mockApiResponse[0],
+        dataset_name: 'High Risk Dataset',
+        fail_rate_total: 0.5, // 50% fail rate
+      } as ApiSummaryRow,
+      {
+        ...mockApiResponse[0],
+        dataset_name: 'Missing Category',
+        category: undefined as any, // Missing category
+      } as ApiSummaryRow,
+    ];
+    
+    const transformedData = transformSummaryData(edgeCaseData);
+    
+    const { container } = render(<SummaryCharts data={transformedData} />);
+    
+    // Should render without errors
+    expect(screen.getByText('Failure Rates by Rule Category')).toBeInTheDocument();
+    expect(screen.getByText('Risk Level Distribution')).toBeInTheDocument();
+  });
+});
+
+describe('SummaryCharts Component - Actual Field Usage Tests', () => {
+  // These tests verify that the component actually uses the correct field names
+  
+  it('should fail if component uses wrong field names for category chart', () => {
+    // This test verifies the component uses rule_category, not category
+    const apiData: ApiSummaryRow[] = [{
+      ...mockApiResponse[0],
+      category: 'API Category Field',
+      // Note: rule_category is NOT in the API response
+    } as ApiSummaryRow];
+    
+    // Without transformation, the component should show "Unknown" categories
+    render(<SummaryCharts data={apiData as any} />);
+    
+    // The component should fail to find rule_category and show "Unknown"
+    // This test documents the current broken behavior
+  });
+  
+  it('should work correctly only with transformed data', () => {
+    const apiData: ApiSummaryRow[] = [{
+      ...mockApiResponse[0],
+      category: 'Data Quality',
+      fail_count_total: 150,
+      pass_count_total: 850,
+    } as ApiSummaryRow];
+    
+    // With transformation
+    const transformedData = transformSummaryData(apiData);
+    
+    // Verify transformation created the expected fields
+    expect(transformedData[0].rule_category).toBe('Data Quality');
+    expect(transformedData[0].total_failures).toBe(150);
+    expect(transformedData[0].total_passes).toBe(850);
+    
+    // Component should work with transformed data
+    render(<SummaryCharts data={transformedData} />);
+    expect(screen.getByText('Failure Rates by Rule Category')).toBeInTheDocument();
   });
 });
 

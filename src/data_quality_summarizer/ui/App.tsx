@@ -4,6 +4,8 @@ import { ProcessingPage } from './pages/ProcessingPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { MLPipelinePage } from './pages/MLPipelinePage'
 import { ProcessingStatus, ProcessingResult } from './types/common'
+import { transformSummaryData } from './utils/dataTransformer'
+import { ApiProcessingResult } from './types/api'
 
 type CurrentPage = 'upload' | 'processing' | 'results' | 'ml-pipeline'
 
@@ -40,9 +42,15 @@ function App() {
         throw new Error(`Processing failed: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const apiResult: ApiProcessingResult = await response.json()
       
-      setProcessingResult(result)
+      // Transform the API response to UI-friendly format
+      const transformedResult: ProcessingResult = {
+        ...apiResult,
+        summary_data: transformSummaryData(apiResult.summary_data)
+      }
+      
+      setProcessingResult(transformedResult)
       setProcessingStatus({
         status: 'completed',
         progress: 100,
