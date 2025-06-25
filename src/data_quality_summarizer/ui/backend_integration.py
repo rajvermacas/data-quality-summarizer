@@ -127,7 +127,7 @@ async def process_files(
                 # Initialize components
                 ingestion_engine = CSVIngester(chunk_size=20000)
                 aggregator = StreamingAggregator()
-                summarizer = SummaryGenerator()
+                summarizer = SummaryGenerator(temp_dir)
                 
                 # Load rule metadata using a simple approach for demo
                 import json
