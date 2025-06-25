@@ -1,3 +1,5 @@
+import { ApiSummaryRow } from './api'
+
 export interface ProcessingStatus {
   status: 'idle' | 'processing' | 'completed' | 'error'
   progress: number
@@ -18,33 +20,33 @@ export interface ProcessingResult {
   }
 }
 
-export interface SummaryRow {
-  source: string
-  tenant_id: string
-  dataset_uuid: string
-  dataset_name: string
-  rule_code: string
-  rule_category: string
-  rule_description: string
-  total_passes: number
-  total_failures: number
-  overall_fail_rate: number
-  pass_rate_1m: number
-  fail_rate_1m: number
-  pass_rate_3m: number
-  fail_rate_3m: number
-  pass_rate_12m: number
-  fail_rate_12m: number
-  trend_1m_vs_3m: string
-  trend_3m_vs_12m: string
-  latest_business_date: string
-  earliest_business_date: string
-  total_execution_days: number
+/**
+ * Enhanced SummaryRow interface for UI consumption.
+ * This extends the API response with calculated fields and UI-friendly names.
+ */
+export interface SummaryRow extends ApiSummaryRow {
+  // UI-friendly field mappings (for backward compatibility)
+  rule_category: string            // = category
+  total_passes: number             // = pass_count_total
+  total_failures: number           // = fail_count_total
+  overall_fail_rate: number        // = fail_rate_total
+  latest_business_date: string     // = business_date_latest
+  
+  // Calculated fields for UI
+  risk_level: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN'
+  improvement_needed: boolean
   avg_daily_executions: number
   execution_consistency: number
+  
+  // Additional UI fields (to be calculated or defaulted)
+  pass_rate_1m: number
+  pass_rate_3m: number
+  pass_rate_12m: number
+  trend_1m_vs_3m: string
+  trend_3m_vs_12m: string
+  earliest_business_date: string
+  total_execution_days: number
   data_volume_trend: string
-  risk_level: string
-  improvement_needed: boolean
   last_failure_date: string | null
 }
 
