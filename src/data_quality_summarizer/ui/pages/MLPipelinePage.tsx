@@ -193,7 +193,7 @@ export const MLPipelinePage: React.FC<MLPipelinePageProps> = ({ onBackToResults,
             <button
               key={tab.id}
               className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'train' | 'predict' | 'batch')}
             >
               <Icon size={16} />
               {tab.label}

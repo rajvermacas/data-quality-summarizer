@@ -145,6 +145,16 @@ export function transformSummaryData(apiData: ApiSummaryRow[], skipValidation = 
   }
   
   return validatedData.map(row => {
+    // Debug logging for NaN issues
+    if (isNaN(row.fail_rate_total)) {
+      console.warn('NaN detected in fail_rate_total for row:', {
+        source: row.source,
+        dataset_name: row.dataset_name,
+        rule_code: row.rule_code,
+        fail_rate_total: row.fail_rate_total
+      })
+    }
+    
     // Calculate derived fields
     const riskLevel = calculateRiskLevel(row.fail_rate_total)
     const improvementNeeded = calculateImprovementNeeded(row.fail_rate_total, row.trend_flag)
@@ -180,7 +190,7 @@ export function transformSummaryData(apiData: ApiSummaryRow[], skipValidation = 
       rule_category: row.category || '',
       total_passes: row.pass_count_total || 0,
       total_failures: row.fail_count_total || 0,
-      overall_fail_rate: row.fail_rate_total || 0,
+      overall_fail_rate: isNaN(row.fail_rate_total) ? 0 : (row.fail_rate_total || 0),
       latest_business_date: row.business_date_latest || '',
       
       // Calculated fields

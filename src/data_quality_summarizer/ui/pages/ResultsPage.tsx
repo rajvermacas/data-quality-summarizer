@@ -47,24 +47,36 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
     const improvementNeeded = summaryData.filter(row => row.improvement_needed).length
 
     const totalFailRate = summaryData.reduce((sum, row) => {
-      const failRate = parseFloat(row.overall_fail_rate as any)
+      // Ensure we have a valid number, handle various input types
+      const failRate = typeof row.overall_fail_rate === 'number' 
+        ? row.overall_fail_rate 
+        : parseFloat(String(row.overall_fail_rate || 0))
       return sum + (isNaN(failRate) ? 0 : failRate)
     }, 0)
     const avgFailRate = totalRules > 0 ? totalFailRate / totalRules : 0
 
     const failRates = summaryData.map(row => {
-      const failRate = parseFloat(row.overall_fail_rate as any)
+      // Ensure we have a valid number, handle various input types
+      const failRate = typeof row.overall_fail_rate === 'number' 
+        ? row.overall_fail_rate 
+        : parseFloat(String(row.overall_fail_rate || 0))
       return isNaN(failRate) ? 0 : failRate
     })
     const worstFailRate = failRates.length > 0 ? Math.max(...failRates) : 0
 
     const totalFailures = summaryData.reduce((sum, row) => {
-      const failures = parseInt(row.total_failures as any, 10)
+      // Ensure we have a valid number, handle various input types
+      const failures = typeof row.total_failures === 'number' 
+        ? row.total_failures 
+        : parseInt(String(row.total_failures || 0), 10)
       return sum + (isNaN(failures) ? 0 : failures)
     }, 0)
 
     const totalPasses = summaryData.reduce((sum, row) => {
-      const passes = parseInt(row.total_passes as any, 10)
+      // Ensure we have a valid number, handle various input types
+      const passes = typeof row.total_passes === 'number' 
+        ? row.total_passes 
+        : parseInt(String(row.total_passes || 0), 10)
       return sum + (isNaN(passes) ? 0 : passes)
     }, 0)
 
@@ -157,7 +169,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, onStartOver, o
             <button
               key={tab.id}
               className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'charts' | 'table' | 'natural-language')}
             >
               <Icon size={16} />
               {tab.label}
