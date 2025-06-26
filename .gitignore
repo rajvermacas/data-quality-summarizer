@@ -258,3 +258,7 @@ feature_utils_cache/
 categorical_consistency_*.json
 prediction_analysis_plots/
 validation_framework_reports/
+
+node_modules/
+coverage/
+debug_*.py
