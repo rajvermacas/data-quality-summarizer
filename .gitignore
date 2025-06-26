@@ -262,3 +262,47 @@ validation_framework_reports/
 node_modules/
 coverage/
 debug_*.py
+
+# UI specific
+ui/node_modules/
+ui/dist/
+ui/.vite/
+ui/coverage/
+ui/*.log
+ui/.env.local
+ui/.env.production
+
+# FastAPI/Backend
+temp/
+resources/processing/
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# IDE specific
+.vscode/
+.idea/
+*.sublime-*
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+server.log
+streamlit.log
+
+# Testing
+test-results/
+playwright-report/
+e2e-screenshots/
+
+# Build artifacts
+*.tsbuildinfo
+.parcel-cache/
+.next/
+.nuxt/
+.cache/
