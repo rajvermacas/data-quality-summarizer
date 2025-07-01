@@ -134,8 +134,9 @@ class TestPipelineOrchestration:
         assert result["processing_time"] < 120  # Should be much faster than 2 minutes
 
         # Verify output files were created
-        summary_file = os.path.join(temp_files["output_dir"], "full_summary.csv")
-        nl_file = os.path.join(temp_files["output_dir"], "nl_all_rows.txt")
+        # Files should now use input filename pattern: test_input_summary.csv, test_input_nl.txt
+        summary_file = os.path.join(temp_files["output_dir"], "test_input_summary.csv")
+        nl_file = os.path.join(temp_files["output_dir"], "test_input_nl.txt")
 
         assert os.path.exists(summary_file)
         assert os.path.exists(nl_file)
@@ -193,8 +194,8 @@ class TestMainEntryPoint:
             "processing_time": 45.5,
             "memory_peak_mb": 250,
             "output_files": {
-                "summary_csv": "/tmp/test/full_summary.csv",
-                "natural_language": "/tmp/test/nl_all_rows.txt",
+                "summary_csv": "/tmp/test/test_input_summary.csv",
+                "natural_language": "/tmp/test/test_input_nl.txt",
             },
         }
 

@@ -257,8 +257,8 @@ def run_pipeline(
 
         # Stage 6: Export artifacts
         logger.info("Exporting summary artifacts...")
-        summary_csv_path = summarizer.generate_csv(summary_data)
-        nl_path = summarizer.generate_nl_sentences(summary_data)
+        summary_csv_path = summarizer.generate_csv(summary_data, csv_file)
+        nl_path = summarizer.generate_nl_sentences(summary_data, csv_file)
 
         end_time = time.time()
         processing_time = end_time - start_time

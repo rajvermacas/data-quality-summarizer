@@ -206,52 +206,48 @@ class TestSummaryGenerator:
     def test_multiple_rows_handling(self, temp_output_dir):
         """Test handling multiple aggregated rows."""
         data = {
-            ("SRC1", "tenant1", "uuid1", "Dataset A", 101): {
+            ("SRC1", "tenant1", "uuid1", "Dataset A", 101, 0): {
                 "rule_name": "ROW_COUNT",
                 "rule_type": "DATASET",
                 "dimension": "Correctness",
                 "rule_description": "Row count validation",
                 "category": 1,
+                "week_group": 0,
+                "week_start_date": date(2024, 1, 15),
+                "week_end_date": date(2024, 1, 21),
                 "business_date_latest": date(2024, 1, 15),
                 "dataset_record_count_latest": 50000,
                 "filtered_record_count_latest": 48000,
-                "pass_count_total": 100,
-                "fail_count_total": 5,
-                "pass_count_1m": 30,
-                "fail_count_1m": 2,
-                "pass_count_3m": 80,
-                "fail_count_3m": 4,
-                "pass_count_12m": 100,
-                "fail_count_12m": 5,
-                "fail_rate_total": 4.76,
-                "fail_rate_1m": 6.25,
-                "fail_rate_3m": 4.76,
-                "fail_rate_12m": 4.76,
+                "dataset_record_count_total": 150000,
+                "filtered_record_count_total": 144000,
+                "pass_count": 100,
+                "fail_count": 5,
+                "warn_count": 0,
+                "fail_rate": 4.76,
+                "previous_period_fail_rate": 6.25,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             },
-            ("SRC2", "tenant2", "uuid2", "Dataset B", 102): {
+            ("SRC2", "tenant2", "uuid2", "Dataset B", 102, 0): {
                 "rule_name": "NULL_CHECK",
                 "rule_type": "ATTRIBUTE",
                 "dimension": "Completeness",
                 "rule_description": "Null value validation",
                 "category": 2,
+                "week_group": 0,
+                "week_start_date": date(2024, 1, 15),
+                "week_end_date": date(2024, 1, 21),
                 "business_date_latest": date(2024, 1, 16),
                 "dataset_record_count_latest": 75000,
                 "filtered_record_count_latest": 73000,
-                "pass_count_total": 200,
-                "fail_count_total": 0,
-                "pass_count_1m": 60,
-                "fail_count_1m": 0,
-                "pass_count_3m": 150,
-                "fail_count_3m": 0,
-                "pass_count_12m": 200,
-                "fail_count_12m": 0,
-                "fail_rate_total": 0.00,
-                "fail_rate_1m": 0.00,
-                "fail_rate_3m": 0.00,
-                "fail_rate_12m": 0.00,
-                "trend_flag": "=",
+                "dataset_record_count_total": 225000,
+                "filtered_record_count_total": 219000,
+                "pass_count": 200,
+                "fail_count": 0,
+                "warn_count": 0,
+                "fail_rate": 0.00,
+                "previous_period_fail_rate": 0.00,
+                "trend_flag": "equal",
                 "last_execution_level": "ATTRIBUTE",
             },
         }
@@ -276,27 +272,25 @@ class TestSummaryGenerator:
     def test_utf8_encoding_handling(self, temp_output_dir):
         """Test proper UTF-8 encoding for special characters."""
         data = {
-            ("SRC1", "tenant1", "uuid1", "Datäset Ñame", 101): {
+            ("SRC1", "tenant1", "uuid1", "Datäset Ñame", 101, 0): {
                 "rule_name": "SPÉCIÅL_CHECK",
                 "rule_type": "DATASET",
                 "dimension": "Correctness",
                 "rule_description": "Special character tëst",
                 "category": 1,
+                "week_group": 0,
+                "week_start_date": date(2024, 1, 15),
+                "week_end_date": date(2024, 1, 21),
                 "business_date_latest": date(2024, 1, 15),
                 "dataset_record_count_latest": 50000,
                 "filtered_record_count_latest": 48000,
-                "pass_count_total": 100,
-                "fail_count_total": 5,
-                "pass_count_1m": 30,
-                "fail_count_1m": 2,
-                "pass_count_3m": 80,
-                "fail_count_3m": 4,
-                "pass_count_12m": 100,
-                "fail_count_12m": 5,
-                "fail_rate_total": 4.76,
-                "fail_rate_1m": 6.25,
-                "fail_rate_3m": 4.76,
-                "fail_rate_12m": 4.76,
+                "dataset_record_count_total": 150000,
+                "filtered_record_count_total": 144000,
+                "pass_count": 100,
+                "fail_count": 5,
+                "warn_count": 0,
+                "fail_rate": 4.76,
+                "previous_period_fail_rate": 6.25,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }
@@ -317,6 +311,31 @@ class TestSummaryGenerator:
         assert "Datäset Ñame" in content
         assert "SPÉCIÅL_CHECK" in content
 
+    def test_dynamic_filename_generation(self, sample_aggregated_data, temp_output_dir):
+        """Test dynamic filename generation based on input filename."""
+        generator = SummaryGenerator(output_dir=temp_output_dir)
+        
+        # Test CSV generation with input filename
+        csv_path = generator.generate_csv(sample_aggregated_data, "my_data_file.csv")
+        assert csv_path.name == "my_data_file_summary.csv"
+        assert csv_path.exists()
+        
+        # Test NL generation with input filename
+        nl_path = generator.generate_nl_sentences(sample_aggregated_data, "my_data_file.csv")
+        assert nl_path.name == "my_data_file_nl.txt"
+        assert nl_path.exists()
+        
+        # Test with complex filename
+        csv_path_complex = generator.generate_csv(sample_aggregated_data, "/path/to/complex-file_name.csv")
+        assert csv_path_complex.name == "complex-file_name_summary.csv"
+        
+        # Test default behavior (no input filename)
+        csv_path_default = generator.generate_csv(sample_aggregated_data)
+        assert csv_path_default.name == "full_summary.csv"
+        
+        nl_path_default = generator.generate_nl_sentences(sample_aggregated_data)
+        assert nl_path_default.name == "nl_all_rows.txt"
+
 
 class TestStandaloneFunctions:
     """Test cases for standalone utility functions."""
@@ -324,34 +343,46 @@ class TestStandaloneFunctions:
     def test_generate_full_summary_csv_function(self):
         """Test standalone CSV generation function."""
         data = {
-            ("SRC1", "tenant1", "uuid1", "Dataset A", 101): {
+            ("SRC1", "tenant1", "uuid1", "Dataset A", 101, 0): {
                 "rule_name": "ROW_COUNT",
                 "business_date_latest": date(2024, 1, 15),
-                "fail_count_total": 5,
+                "fail_count": 5,
                 "trend_flag": "up",
             }
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Test with default filename (no input filename provided)
             output_path = generate_full_summary_csv(data, tmpdir)
             assert output_path.exists()
             assert output_path.name == "full_summary.csv"
+            
+            # Test with custom input filename
+            output_path_custom = generate_full_summary_csv(data, tmpdir, "test_input.csv")
+            assert output_path_custom.exists()
+            assert output_path_custom.name == "test_input_summary.csv"
 
     def test_generate_nl_sentences_function(self):
         """Test standalone NL generation function."""
         data = {
-            ("SRC1", "tenant1", "uuid1", "Dataset A", 101): {
+            ("SRC1", "tenant1", "uuid1", "Dataset A", 101, 0): {
                 "rule_name": "ROW_COUNT",
                 "business_date_latest": date(2024, 1, 15),
-                "fail_count_total": 5,
-                "pass_count_total": 100,
+                "fail_count": 5,
+                "pass_count": 100,
             }
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Test with default filename (no input filename provided)
             output_path = generate_nl_sentences(data, tmpdir)
             assert output_path.exists()
             assert output_path.name == "nl_all_rows.txt"
+            
+            # Test with custom input filename
+            output_path_custom = generate_nl_sentences(data, tmpdir, "test_input.csv")
+            assert output_path_custom.exists()
+            assert output_path_custom.name == "test_input_nl.txt"
 
 
 class TestEdgeCases:
@@ -370,7 +401,7 @@ class TestEdgeCases:
         csv_path = generator.generate_csv({})
         df = pd.read_csv(csv_path)
         assert len(df) == 0
-        assert len(df.columns) == 27  # Schema preserved
+        assert len(df.columns) == 23  # Schema preserved
 
         nl_path = generator.generate_nl_sentences({})
         with open(nl_path, "r") as f:
@@ -391,28 +422,26 @@ class TestEdgeCases:
         # Generate larger dataset to test file size
         large_data = {}
         for i in range(1000):  # 1000 rows should still be well under 2MB
-            key = (f"SRC{i}", f"tenant{i}", f"uuid{i}", f"Dataset {i}", 100 + i)
+            key = (f"SRC{i}", f"tenant{i}", f"uuid{i}", f"Dataset {i}", 100 + i, 0)
             large_data[key] = {
                 "rule_name": f"RULE_{i}",
                 "rule_type": "DATASET",
                 "dimension": "Correctness",
                 "rule_description": f"Test rule {i} description",
                 "category": 1,
+                "week_group": 0,
+                "week_start_date": date(2024, 1, 15),
+                "week_end_date": date(2024, 1, 21),
                 "business_date_latest": date(2024, 1, 15),
                 "dataset_record_count_latest": 50000,
                 "filtered_record_count_latest": 48000,
-                "pass_count_total": 100,
-                "fail_count_total": 5,
-                "pass_count_1m": 30,
-                "fail_count_1m": 2,
-                "pass_count_3m": 80,
-                "fail_count_3m": 4,
-                "pass_count_12m": 100,
-                "fail_count_12m": 5,
-                "fail_rate_total": 4.76,
-                "fail_rate_1m": 6.25,
-                "fail_rate_3m": 4.76,
-                "fail_rate_12m": 4.76,
+                "dataset_record_count_total": 150000,
+                "filtered_record_count_total": 144000,
+                "pass_count": 100,
+                "fail_count": 5,
+                "warn_count": 0,
+                "fail_rate": 4.76,
+                "previous_period_fail_rate": 6.25,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }

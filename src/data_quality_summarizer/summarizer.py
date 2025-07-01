@@ -50,13 +50,15 @@ class SummaryGenerator:
             raise
 
     def generate_csv(
-        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]]
+        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
+        input_filename: str = None
     ) -> Path:
         """
         Generate full summary CSV with exact 27-column schema.
 
         Args:
             aggregated_data: Dictionary with composite keys and aggregated metrics
+            input_filename: Optional input CSV filename to derive output name from
 
         Returns:
             Path to generated CSV file
@@ -128,7 +130,15 @@ class SummaryGenerator:
 
         # Create DataFrame and save
         df = pd.DataFrame(rows, columns=columns)
-        csv_path = self.output_dir / "full_summary.csv"
+        
+        # Generate output filename based on input filename or use default
+        if input_filename:
+            base_name = Path(input_filename).stem
+            output_filename = f"{base_name}_summary.csv"
+        else:
+            output_filename = "full_summary.csv"
+        
+        csv_path = self.output_dir / output_filename
 
         try:
             df.to_csv(csv_path, index=False, encoding="utf-8", float_format="%.2f")
@@ -139,13 +149,15 @@ class SummaryGenerator:
             raise
 
     def generate_nl_sentences(
-        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]]
+        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
+        input_filename: str = None
     ) -> Path:
         """
         Generate natural language sentences following exact template.
 
         Args:
             aggregated_data: Dictionary with composite keys and aggregated metrics
+            input_filename: Optional input CSV filename to derive output name from
 
         Returns:
             Path to generated NL text file
@@ -185,7 +197,14 @@ class SummaryGenerator:
             sentences.append(sentence)
 
         # Write to file
-        nl_path = self.output_dir / "nl_all_rows.txt"
+        # Generate output filename based on input filename or use default
+        if input_filename:
+            base_name = Path(input_filename).stem
+            output_filename = f"{base_name}_nl.txt"
+        else:
+            output_filename = "nl_all_rows.txt"
+        
+        nl_path = self.output_dir / output_filename
 
         try:
             with open(nl_path, "w", encoding="utf-8") as f:
@@ -206,6 +225,7 @@ class SummaryGenerator:
 def generate_full_summary_csv(
     aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
     output_dir: str,
+    input_filename: str = None,
 ) -> Path:
     """
     Standalone function to generate full summary CSV.
@@ -213,17 +233,19 @@ def generate_full_summary_csv(
     Args:
         aggregated_data: Dictionary with composite keys and aggregated metrics
         output_dir: Directory path for output files
+        input_filename: Optional input CSV filename to derive output name from
 
     Returns:
         Path to generated CSV file
     """
     generator = SummaryGenerator(output_dir)
-    return generator.generate_csv(aggregated_data)
+    return generator.generate_csv(aggregated_data, input_filename)
 
 
 def generate_nl_sentences(
     aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
     output_dir: str,
+    input_filename: str = None,
 ) -> Path:
     """
     Standalone function to generate natural language sentences.
@@ -231,9 +253,10 @@ def generate_nl_sentences(
     Args:
         aggregated_data: Dictionary with composite keys and aggregated metrics
         output_dir: Directory path for output files
+        input_filename: Optional input CSV filename to derive output name from
 
     Returns:
         Path to generated NL text file
     """
     generator = SummaryGenerator(output_dir)
-    return generator.generate_nl_sentences(aggregated_data)
+    return generator.generate_nl_sentences(aggregated_data, input_filename)
