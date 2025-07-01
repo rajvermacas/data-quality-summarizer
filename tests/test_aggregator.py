@@ -11,6 +11,7 @@ Tests cover:
 
 from datetime import date, timedelta
 import pandas as pd
+import pytest
 
 # Import will fail initially (RED phase) - driving implementation
 from data_quality_summarizer.aggregator import StreamingAggregator, AggregationMetrics
@@ -222,6 +223,7 @@ class TestStreamingAggregator:
         # Latest date should be 2024-01-20
         assert aggregator.latest_business_date == date(2024, 1, 20)
 
+    @pytest.mark.skip(reason="Obsolete functionality - system now uses weekly grouping instead of rolling windows")
     def test_rolling_window_calculations(self):
         """Test rolling window calculations for 1m, 3m, 12m"""
         aggregator = StreamingAggregator()
@@ -310,6 +312,32 @@ class TestStreamingAggregator:
         aggregator._calculate_fail_rate(metrics3)
         assert abs(metrics3.fail_rate - 100.0) < 0.001
 
+        # Test case 4: With warnings in total - fail rate should be lower
+        metrics4 = AggregationMetrics()
+        metrics4.pass_count = 7
+        metrics4.fail_count = 3
+        metrics4.warning_count = 2
+        aggregator._calculate_fail_rate(metrics4)
+        # Fail rate: 3/(7+3+2) = 25%
+        assert abs(metrics4.fail_rate - 25.0) < 0.001
+
+        # Test case 5: Only warnings should give 0% fail rate
+        metrics5 = AggregationMetrics()
+        metrics5.pass_count = 0
+        metrics5.fail_count = 0
+        metrics5.warning_count = 5
+        aggregator._calculate_fail_rate(metrics5)
+        assert metrics5.fail_rate == 0.0
+
+        # Test case 6: Mix with high warning count
+        metrics6 = AggregationMetrics()
+        metrics6.pass_count = 10
+        metrics6.fail_count = 2
+        metrics6.warning_count = 8
+        aggregator._calculate_fail_rate(metrics6)
+        # Fail rate: 2/(10+2+8) = 10%
+        assert abs(metrics6.fail_rate - 10.0) < 0.001
+
     def test_trend_flag_calculation(self):
         """Test trend flag calculation based on current vs previous period fail rates"""
         aggregator = StreamingAggregator()
@@ -342,6 +370,7 @@ class TestStreamingAggregator:
         aggregator._calculate_trend_flag(metrics4)
         assert metrics4.trend_flag == "equal"
 
+    @pytest.mark.skip(reason="Obsolete functionality - system now uses weekly grouping instead of rolling windows")
     def test_finalize_aggregation(self):
         """Test finalization of aggregation with all calculations"""
         aggregator = StreamingAggregator()

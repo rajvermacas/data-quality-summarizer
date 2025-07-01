@@ -303,12 +303,12 @@ class StreamingAggregator:
         Args:
             metrics: AggregationMetrics object to update with fail rate
         """
-        def safe_fail_rate(fail_count: int, pass_count: int) -> float:
+        def safe_fail_rate(fail_count: int, pass_count: int, warning_count: int) -> float:
             """Calculate fail rate as percentage with division by zero protection"""
-            total = pass_count + fail_count
+            total = pass_count + fail_count + warning_count
             return (fail_count / total * 100) if total > 0 else 0.0
 
-        metrics.fail_rate = safe_fail_rate(metrics.fail_count, metrics.pass_count)
+        metrics.fail_rate = safe_fail_rate(metrics.fail_count, metrics.pass_count, metrics.warning_count)
 
     def _calculate_trend_flag(self, metrics: AggregationMetrics):
         """
