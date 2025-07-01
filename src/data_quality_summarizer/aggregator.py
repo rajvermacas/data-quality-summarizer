@@ -91,7 +91,7 @@ class StreamingAggregator:
         """Initialize streaming aggregator with empty accumulator"""
         self.accumulator: Dict[Tuple[str, str, str, str, int, int], AggregationMetrics] = {}
         self.weeks = weeks  # Number of weeks to group together
-        self.epsilon = 0.05  # Threshold for trend calculations
+        self.epsilon = 5.0  # Threshold for trend calculations (5% difference for percentage values)
         self.earliest_business_date: Optional[date] = None
         self.latest_business_date: Optional[date] = None
 
@@ -298,15 +298,15 @@ class StreamingAggregator:
 
     def _calculate_fail_rate(self, metrics: AggregationMetrics):
         """
-        Calculate fail rate for a weekly period.
+        Calculate fail rate for a weekly period as percentage (0-100).
 
         Args:
             metrics: AggregationMetrics object to update with fail rate
         """
         def safe_fail_rate(fail_count: int, pass_count: int) -> float:
-            """Calculate fail rate with division by zero protection"""
+            """Calculate fail rate as percentage with division by zero protection"""
             total = pass_count + fail_count
-            return fail_count / total if total > 0 else 0.0
+            return (fail_count / total * 100) if total > 0 else 0.0
 
         metrics.fail_rate = safe_fail_rate(metrics.fail_count, metrics.pass_count)
 

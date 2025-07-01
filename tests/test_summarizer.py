@@ -43,8 +43,8 @@ class TestSummaryGenerator:
                 "pass_count": 100,
                 "fail_count": 5,
                 "warn_count": 0,
-                "fail_rate": 0.0476,
-                "previous_period_fail_rate": 0.0625,
+                "fail_rate": 4.76,
+                "previous_period_fail_rate": 6.25,
                 "trend_flag": "down",
                 "last_execution_level": "DATASET",
             }
@@ -127,10 +127,10 @@ class TestSummaryGenerator:
         assert row["dataset_name"] == "Dataset A"
         assert row["rule_code"] == 101
         assert row["rule_name"] == "ROW_COUNT"
-        assert row["fail_count_total"] == 5
-        assert row["pass_count_total"] == 100
-        assert abs(row["fail_rate_total"] - 0.0476) < 0.0001
-        assert row["trend_flag"] == "up"
+        assert row["fail_count"] == 5
+        assert row["pass_count"] == 100
+        assert abs(row["fail_rate"] - 4.76) < 0.0001
+        assert row["trend_flag"] == "down"
 
     def test_decimal_precision_formatting(self, sample_aggregated_data, temp_output_dir):
         """Test that fail rate columns are formatted to 2 decimal places."""
@@ -146,17 +146,13 @@ class TestSummaryGenerator:
         data_line = lines[1]  # Skip header
         values = data_line.split(",")
         
-        # Get the fail rate columns (indices 25-28 based on schema)
-        fail_rate_total = values[25]
-        fail_rate_1m = values[26] 
-        fail_rate_3m = values[27]
-        fail_rate_12m = values[28]
+        # Get the fail rate columns (actual schema: fail_rate is index 19, previous_period_fail_rate is index 20)
+        fail_rate = values[19]
+        previous_period_fail_rate = values[20]
         
-        # Verify 2 decimal place formatting
-        assert fail_rate_total == "0.05", f"Expected '0.05', got '{fail_rate_total}'"
-        assert fail_rate_1m == "0.06", f"Expected '0.06', got '{fail_rate_1m}'"
-        assert fail_rate_3m == "0.05", f"Expected '0.05', got '{fail_rate_3m}'"
-        assert fail_rate_12m == "0.05", f"Expected '0.05', got '{fail_rate_12m}'"
+        # Verify 2 decimal place formatting for percentage values
+        assert fail_rate == "4.76", f"Expected '4.76', got '{fail_rate}'"
+        assert previous_period_fail_rate == "6.25", f"Expected '6.25', got '{previous_period_fail_rate}'"
 
     def test_generate_nl_sentences(self, sample_aggregated_data, temp_output_dir):
         """Test natural language sentence generation."""
@@ -179,7 +175,7 @@ class TestSummaryGenerator:
         assert "5 failures" in content
         assert "100 passes" in content
         assert "fail-rate 4.76%" in content
-        assert "trend up" in content
+        assert "trend down" in content
 
     def test_nl_sentence_template_exact_format(
         self, sample_aggregated_data, temp_output_dir
@@ -193,13 +189,15 @@ class TestSummaryGenerator:
 
         # Expected template format
         expected_parts = [
-            "• On 2024-01-15",
+            "• For week group 0",
+            '(2024-01-15 to 2024-01-21)',
             'dataset "Dataset A"',
             "(source: SRC1, tenant: tenant1, UUID: uuid1)",
             'under rule "ROW_COUNT" [101]',
-            "recorded 5 failures and 100 passes overall",
-            "(fail-rate 4.76%; 1-month 6.25%, 3-month 4.76%, 12-month 4.76%)",
-            "— trend up",
+            "recorded 5 failures, 0 warnings, and 100 passes",
+            "(fail-rate 4.76%)",
+            "— trend down (vs previous period: 6.25%)",
+            "Latest business date: 2024-01-15",
         ]
 
         for part in expected_parts:
@@ -225,10 +223,10 @@ class TestSummaryGenerator:
                 "fail_count_3m": 4,
                 "pass_count_12m": 100,
                 "fail_count_12m": 5,
-                "fail_rate_total": 0.0476,
-                "fail_rate_1m": 0.0625,
-                "fail_rate_3m": 0.0476,
-                "fail_rate_12m": 0.0476,
+                "fail_rate_total": 4.76,
+                "fail_rate_1m": 6.25,
+                "fail_rate_3m": 4.76,
+                "fail_rate_12m": 4.76,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             },
@@ -249,10 +247,10 @@ class TestSummaryGenerator:
                 "fail_count_3m": 0,
                 "pass_count_12m": 200,
                 "fail_count_12m": 0,
-                "fail_rate_total": 0.0000,
-                "fail_rate_1m": 0.0000,
-                "fail_rate_3m": 0.0000,
-                "fail_rate_12m": 0.0000,
+                "fail_rate_total": 0.00,
+                "fail_rate_1m": 0.00,
+                "fail_rate_3m": 0.00,
+                "fail_rate_12m": 0.00,
                 "trend_flag": "=",
                 "last_execution_level": "ATTRIBUTE",
             },
@@ -295,10 +293,10 @@ class TestSummaryGenerator:
                 "fail_count_3m": 4,
                 "pass_count_12m": 100,
                 "fail_count_12m": 5,
-                "fail_rate_total": 0.0476,
-                "fail_rate_1m": 0.0625,
-                "fail_rate_3m": 0.0476,
-                "fail_rate_12m": 0.0476,
+                "fail_rate_total": 4.76,
+                "fail_rate_1m": 6.25,
+                "fail_rate_3m": 4.76,
+                "fail_rate_12m": 4.76,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }
@@ -411,10 +409,10 @@ class TestEdgeCases:
                 "fail_count_3m": 4,
                 "pass_count_12m": 100,
                 "fail_count_12m": 5,
-                "fail_rate_total": 0.0476,
-                "fail_rate_1m": 0.0625,
-                "fail_rate_3m": 0.0476,
-                "fail_rate_12m": 0.0476,
+                "fail_rate_total": 4.76,
+                "fail_rate_1m": 6.25,
+                "fail_rate_3m": 4.76,
+                "fail_rate_12m": 4.76,
                 "trend_flag": "up",
                 "last_execution_level": "DATASET",
             }

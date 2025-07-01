@@ -172,14 +172,14 @@ class SummaryGenerator:
             period_desc = f"week group {week_group} ({week_start_date} to {week_end_date})"
             trend_desc = f"trend {trend_flag}"
             if previous_fail_rate is not None:
-                trend_desc += f" (vs previous period: {previous_fail_rate:.2%})"
+                trend_desc += f" (vs previous period: {previous_fail_rate:.2f}%)"
             
             sentence = (
                 f'• For {period_desc}, dataset "{dataset_name}" '
                 f"(source: {source}, tenant: {tenant_id}, UUID: {dataset_uuid}) "
                 f'under rule "{rule_name}" [{rule_code}] '
                 f"recorded {fail_count} failures, {warn_count} warnings, and {pass_count} passes "
-                f"(fail-rate {fail_rate:.2%}) "
+                f"(fail-rate {fail_rate:.2f}%) "
                 f"— {trend_desc}. Latest business date: {business_date_latest}."
             )
             sentences.append(sentence)

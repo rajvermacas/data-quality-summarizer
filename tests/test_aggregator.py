@@ -280,61 +280,67 @@ class TestStreamingAggregator:
         assert metrics.fail_count_12m == 2  # Same as 3m
 
     def test_fail_rate_calculations(self):
-        """Test fail rate calculations for all time periods"""
+        """Test fail rate calculation as percentage"""
         aggregator = StreamingAggregator()
 
         # Create metrics with known counts
         metrics = AggregationMetrics()
 
-        # Set test values
-        metrics.pass_count_total = 7
-        metrics.fail_count_total = 3
-        metrics.pass_count_1m = 2
-        metrics.fail_count_1m = 1
-        metrics.pass_count_3m = 4
-        metrics.fail_count_3m = 2
-        metrics.pass_count_12m = 6
-        metrics.fail_count_12m = 3
+        # Test case 1: Basic fail rate calculation
+        metrics.pass_count = 7
+        metrics.fail_count = 3
 
-        # Calculate fail rates
-        aggregator._calculate_fail_rates(metrics)
+        # Calculate fail rate
+        aggregator._calculate_fail_rate(metrics)
 
-        # Total fail rate: 3/(7+3) = 0.3
-        assert abs(metrics.fail_rate_total - 0.3) < 0.001
+        # Fail rate: 3/(7+3) = 30%
+        assert abs(metrics.fail_rate - 30.0) < 0.001
 
-        # 1m fail rate: 1/(2+1) = 0.333...
-        assert abs(metrics.fail_rate_1m - (1 / 3)) < 0.001
+        # Test case 2: Zero total should give 0% fail rate
+        metrics2 = AggregationMetrics()
+        metrics2.pass_count = 0
+        metrics2.fail_count = 0
+        aggregator._calculate_fail_rate(metrics2)
+        assert metrics2.fail_rate == 0.0
 
-        # 3m fail rate: 2/(4+2) = 0.333...
-        assert abs(metrics.fail_rate_3m - (2 / 6)) < 0.001
-
-        # 12m fail rate: 3/(6+3) = 0.333...
-        assert abs(metrics.fail_rate_12m - (3 / 9)) < 0.001
+        # Test case 3: All failures should give 100% fail rate
+        metrics3 = AggregationMetrics()
+        metrics3.pass_count = 0
+        metrics3.fail_count = 5
+        aggregator._calculate_fail_rate(metrics3)
+        assert abs(metrics3.fail_rate - 100.0) < 0.001
 
     def test_trend_flag_calculation(self):
-        """Test trend flag calculation based on 1m vs 3m fail rates"""
+        """Test trend flag calculation based on current vs previous period fail rates"""
         aggregator = StreamingAggregator()
 
         # Test case 1: Improving trend (down)
         metrics1 = AggregationMetrics()
-        metrics1.fail_rate_1m = 0.2
-        metrics1.fail_rate_3m = 0.4
+        metrics1.fail_rate = 20.0
+        metrics1.previous_period_fail_rate = 40.0
         aggregator._calculate_trend_flag(metrics1)
         assert metrics1.trend_flag == "down"
 
         # Test case 2: Degrading trend (up)
         metrics2 = AggregationMetrics()
-        metrics2.fail_rate_1m = 0.5
-        metrics2.fail_rate_3m = 0.2
+        metrics2.fail_rate = 50.0
+        metrics2.previous_period_fail_rate = 20.0
         aggregator._calculate_trend_flag(metrics2)
         assert metrics2.trend_flag == "up"
 
         # Test case 3: Stable trend (equal)
         metrics3 = AggregationMetrics()
-        metrics3.fail_rate_1m = 0.3
-        metrics3.fail_rate_3m = 0.31  # Within epsilon threshold
+        metrics3.fail_rate = 30.0
+        metrics3.previous_period_fail_rate = 31.0  # Within epsilon threshold (5%)
         aggregator._calculate_trend_flag(metrics3)
         assert metrics3.trend_flag == "equal"
+
+        # Test case 4: No previous period data
+        metrics4 = AggregationMetrics()
+        metrics4.fail_rate = 30.0
+        metrics4.previous_period_fail_rate = None
+        aggregator._calculate_trend_flag(metrics4)
+        assert metrics4.trend_flag == "equal"
 
     def test_finalize_aggregation(self):
         """Test finalization of aggregation with all calculations"""
@@ -584,13 +590,13 @@ class TestWeeklyGrouping:
         week_1_metrics = aggregator.accumulator[key_week_1]
         
         # Week 0: 20% fail rate, no previous period
-        assert abs(week_0_metrics.fail_rate - 0.2) < 0.01
+        assert abs(week_0_metrics.fail_rate - 20.0) < 0.01
         assert week_0_metrics.previous_period_fail_rate is None
         assert week_0_metrics.trend_flag == "equal"
         
         # Week 1: 10% fail rate, previous was 20%, so trend should be "down" (improving)
-        assert abs(week_1_metrics.fail_rate - 0.1) < 0.01
-        assert abs(week_1_metrics.previous_period_fail_rate - 0.2) < 0.01
+        assert abs(week_1_metrics.fail_rate - 10.0) < 0.01
+        assert abs(week_1_metrics.previous_period_fail_rate - 20.0) < 0.01
         assert week_1_metrics.trend_flag == "down"
 
     def test_multi_dataset_weekly_grouping(self):
