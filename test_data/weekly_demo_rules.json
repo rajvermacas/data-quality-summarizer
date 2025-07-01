@@ -1,0 +1,37 @@
+{
+    "201": {
+        "rule_name": "DATASET_COMPLETENESS_CHECK",
+        "rule_type": "DATASET",
+        "dimension": "Completeness",
+        "rule_description": "Validates that the dataset contains the expected minimum number of records and meets data volume thresholds",
+        "category": "C1"
+    },
+    "202": {
+        "rule_name": "CUSTOMER_ID_NULL_CHECK",
+        "rule_type": "ATTRIBUTE",
+        "dimension": "Completeness",
+        "rule_description": "Ensures customer_id field is not null and properly populated in all transaction records",
+        "category": "C1"
+    },
+    "203": {
+        "rule_name": "TRANSACTION_DATE_VALIDITY",
+        "rule_type": "ATTRIBUTE", 
+        "dimension": "Validity",
+        "rule_description": "Validates that transaction_date is in correct format, within valid range, and not in the future",
+        "category": "C2"
+    },
+    "204": {
+        "rule_name": "EMAIL_FORMAT_VALIDATION",
+        "rule_type": "ATTRIBUTE",
+        "dimension": "Validity",
+        "rule_description": "Checks that email addresses follow valid format patterns and contain required components",
+        "category": "C3"
+    },
+    "205": {
+        "rule_name": "PAYMENT_AMOUNT_RANGE_CHECK",
+        "rule_type": "ATTRIBUTE",
+        "dimension": "Validity",
+        "rule_description": "Validates that payment amounts are within acceptable ranges, positive values, and have proper decimal precision",
+        "category": "C2"
+    }
+}

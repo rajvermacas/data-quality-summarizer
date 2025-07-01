@@ -9,7 +9,7 @@ Tests cover:
 - Trend computation
 """
 
-from datetime import date
+from datetime import date, timedelta
 import pandas as pd
 
 # Import will fail initially (RED phase) - driving implementation
@@ -24,6 +24,8 @@ class TestStreamingAggregator:
         aggregator = StreamingAggregator()
         assert aggregator.accumulator == {}
         assert aggregator.latest_business_date is None
+        assert aggregator.earliest_business_date is None
+        assert aggregator.weeks == 1  # Default value
 
     def test_composite_key_generation(self):
         """Test composite key creation from row data"""
@@ -37,8 +39,9 @@ class TestStreamingAggregator:
             "rule_code": 101,
         }
 
-        expected_key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
-        actual_key = aggregator._create_composite_key(row_data)
+        week_group = 0
+        expected_key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        actual_key = aggregator._create_composite_key(row_data, week_group)
         assert actual_key == expected_key
 
     def test_process_single_row_creates_entry(self):
@@ -62,13 +65,15 @@ class TestStreamingAggregator:
 
         aggregator.process_row(row)
 
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        # With new weekly structure, key includes week_group
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         assert key in aggregator.accumulator
 
         metrics = aggregator.accumulator[key]
-        assert metrics.pass_count_total == 1
-        assert metrics.fail_count_total == 0
-        assert metrics.warn_count_total == 0
+        assert metrics.pass_count == 1
+        assert metrics.fail_count == 0
+        assert metrics.warn_count == 0
+        assert metrics.week_group == 0
 
     def test_process_row_with_fail_result(self):
         """Test processing row with fail result"""
@@ -91,11 +96,11 @@ class TestStreamingAggregator:
 
         aggregator.process_row(row)
 
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         metrics = aggregator.accumulator[key]
-        assert metrics.pass_count_total == 0
-        assert metrics.fail_count_total == 1
-        assert metrics.warn_count_total == 0
+        assert metrics.pass_count == 0
+        assert metrics.fail_count == 1
+        assert metrics.warn_count == 0
 
     def test_process_row_with_warning_result(self):
         """Test processing row with warning result"""
@@ -118,11 +123,11 @@ class TestStreamingAggregator:
 
         aggregator.process_row(row)
 
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         metrics = aggregator.accumulator[key]
-        assert metrics.pass_count_total == 0
-        assert metrics.fail_count_total == 0
-        assert metrics.warn_count_total == 1
+        assert metrics.pass_count == 0
+        assert metrics.fail_count == 0
+        assert metrics.warn_count == 1
 
     def test_malformed_json_results_handling(self):
         """Test graceful handling of malformed JSON in results"""
@@ -461,3 +466,166 @@ class TestStreamingAggregatorPerformance:
         # Rough memory check - accumulator should be reasonable size
         accumulator_size = sys.getsizeof(aggregator.accumulator)
         assert accumulator_size < 50 * 1024 * 1024  # 50MB
+
+
+class TestWeeklyGrouping:
+    """Test suite for weekly grouping functionality"""
+
+    def test_single_week_grouping(self):
+        """Test 1-week grouping (default behavior)"""
+        aggregator = StreamingAggregator(weeks=1)
+        
+        # Create data for consecutive days in the same week
+        base_date = date(2024, 1, 15)  # Monday
+        for day_offset in range(3):  # Mon, Tue, Wed
+            row = pd.Series({
+                "source": "test_system",
+                "tenant_id": "tenant_123",
+                "dataset_uuid": "uuid-456",
+                "dataset_name": "Test Dataset",
+                "rule_code": 101,
+                "business_date": str(base_date + timedelta(days=day_offset)),
+                "results": '{"result": "Pass"}',
+                "dataset_record_count": 1000,
+                "filtered_record_count": 950,
+                "level_of_execution": "DATASET",
+            })
+            aggregator.process_row(row)
+        
+        # Should have 1 key for week group 0
+        assert len(aggregator.accumulator) == 1
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        assert key in aggregator.accumulator
+        
+        metrics = aggregator.accumulator[key]
+        assert metrics.pass_count == 3
+        assert metrics.week_group == 0
+
+    def test_two_week_grouping(self):
+        """Test 2-week grouping functionality"""
+        aggregator = StreamingAggregator(weeks=2)
+        
+        # Create data spanning 3 weeks
+        base_date = date(2024, 1, 15)  # Monday of week 1
+        for week in range(3):
+            for day in range(2):  # 2 days per week
+                row = pd.Series({
+                    "source": "test_system",
+                    "tenant_id": "tenant_123", 
+                    "dataset_uuid": "uuid-456",
+                    "dataset_name": "Test Dataset",
+                    "rule_code": 101,
+                    "business_date": str(base_date + timedelta(weeks=week, days=day)),
+                    "results": '{"result": "Pass"}',
+                    "dataset_record_count": 1000,
+                    "filtered_record_count": 950,
+                    "level_of_execution": "DATASET",
+                })
+                aggregator.process_row(row)
+        
+        # Should have 2 keys: 
+        # - Week group 0 (weeks 0-1): 4 passes
+        # - Week group 1 (week 2): 2 passes
+        assert len(aggregator.accumulator) == 2
+        
+        key_group_0 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        key_group_1 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 1)
+        
+        assert key_group_0 in aggregator.accumulator
+        assert key_group_1 in aggregator.accumulator
+        
+        assert aggregator.accumulator[key_group_0].pass_count == 4
+        assert aggregator.accumulator[key_group_1].pass_count == 2
+
+    def test_trend_calculation_between_periods(self):
+        """Test trend calculation between weekly periods"""
+        aggregator = StreamingAggregator(weeks=1)
+        
+        # Week 1: 8 passes, 2 fails (20% fail rate)
+        base_date = date(2024, 1, 15)
+        for i in range(10):
+            result = "Fail" if i < 2 else "Pass"
+            row = pd.Series({
+                "source": "test_system",
+                "tenant_id": "tenant_123",
+                "dataset_uuid": "uuid-456", 
+                "dataset_name": "Test Dataset",
+                "rule_code": 101,
+                "business_date": str(base_date),
+                "results": f'{{"result": "{result}"}}',
+                "dataset_record_count": 1000,
+                "filtered_record_count": 950,
+                "level_of_execution": "DATASET",
+            })
+            aggregator.process_row(row)
+        
+        # Week 2: 9 passes, 1 fail (10% fail rate) - improving trend
+        week2_date = base_date + timedelta(weeks=1)
+        for i in range(10):
+            result = "Fail" if i < 1 else "Pass"
+            row = pd.Series({
+                "source": "test_system",
+                "tenant_id": "tenant_123",
+                "dataset_uuid": "uuid-456",
+                "dataset_name": "Test Dataset", 
+                "rule_code": 101,
+                "business_date": str(week2_date),
+                "results": f'{{"result": "{result}"}}',
+                "dataset_record_count": 1000,
+                "filtered_record_count": 950,
+                "level_of_execution": "DATASET",
+            })
+            aggregator.process_row(row)
+        
+        # Finalize to calculate trends
+        aggregator.finalize_aggregation()
+        
+        # Check week 1 and week 2 metrics
+        key_week_0 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        key_week_1 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 1)
+        
+        week_0_metrics = aggregator.accumulator[key_week_0]
+        week_1_metrics = aggregator.accumulator[key_week_1]
+        
+        # Week 0: 20% fail rate, no previous period
+        assert abs(week_0_metrics.fail_rate - 0.2) < 0.01
+        assert week_0_metrics.previous_period_fail_rate is None
+        assert week_0_metrics.trend_flag == "equal"
+        
+        # Week 1: 10% fail rate, previous was 20%, so trend should be "down" (improving)
+        assert abs(week_1_metrics.fail_rate - 0.1) < 0.01
+        assert abs(week_1_metrics.previous_period_fail_rate - 0.2) < 0.01
+        assert week_1_metrics.trend_flag == "down"
+
+    def test_multi_dataset_weekly_grouping(self):
+        """Test weekly grouping with multiple datasets"""
+        aggregator = StreamingAggregator(weeks=1)
+        
+        base_date = date(2024, 1, 15)
+        
+        # Create data for 2 different datasets across 2 weeks
+        for week in range(2):
+            for dataset_idx in range(2):
+                row = pd.Series({
+                    "source": "test_system",
+                    "tenant_id": "tenant_123",
+                    "dataset_uuid": f"uuid-{dataset_idx}",
+                    "dataset_name": f"Dataset {dataset_idx}",
+                    "rule_code": 101,
+                    "business_date": str(base_date + timedelta(weeks=week)),
+                    "results": '{"result": "Pass"}',
+                    "dataset_record_count": 1000,
+                    "filtered_record_count": 950,
+                    "level_of_execution": "DATASET",
+                })
+                aggregator.process_row(row)
+        
+        # Should have 4 keys total (2 datasets × 2 weeks)
+        assert len(aggregator.accumulator) == 4
+        
+        # Check that each dataset-week combination exists
+        for week in range(2):
+            for dataset_idx in range(2):
+                key = ("test_system", "tenant_123", f"uuid-{dataset_idx}", f"Dataset {dataset_idx}", 101, week)
+                assert key in aggregator.accumulator
+                assert aggregator.accumulator[key].pass_count == 1

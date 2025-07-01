@@ -50,7 +50,7 @@ class SummaryGenerator:
             raise
 
     def generate_csv(
-        self, aggregated_data: Dict[Tuple[str, str, str, str, int], Dict[str, Any]]
+        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]]
     ) -> Path:
         """
         Generate full summary CSV with exact 27-column schema.
@@ -63,7 +63,7 @@ class SummaryGenerator:
         """
         self._ensure_output_directory()
 
-        # Define exact 31-column schema (updated to include warnings)
+        # Define weekly aggregation schema
         columns = [
             "source",
             "tenant_id",
@@ -75,25 +75,17 @@ class SummaryGenerator:
             "dimension",
             "rule_description",
             "category",
+            "week_group",
+            "week_start_date",
+            "week_end_date",
             "business_date_latest",
             "dataset_record_count_latest",
             "filtered_record_count_latest",
-            "pass_count_total",
-            "fail_count_total",
-            "warn_count_total",
-            "pass_count_1m",
-            "fail_count_1m",
-            "warn_count_1m",
-            "pass_count_3m",
-            "fail_count_3m",
-            "warn_count_3m",
-            "pass_count_12m",
-            "fail_count_12m",
-            "warn_count_12m",
-            "fail_rate_total",
-            "fail_rate_1m",
-            "fail_rate_3m",
-            "fail_rate_12m",
+            "pass_count",
+            "fail_count",
+            "warn_count",
+            "fail_rate",
+            "previous_period_fail_rate",
             "trend_flag",
             "last_execution_level",
         ]
@@ -101,7 +93,7 @@ class SummaryGenerator:
         # Build rows from aggregated data
         rows = []
         for key, metrics in aggregated_data.items():
-            source, tenant_id, dataset_uuid, dataset_name, rule_code = key
+            source, tenant_id, dataset_uuid, dataset_name, rule_code, week_group = key
 
             row = {
                 "source": source,
@@ -114,6 +106,9 @@ class SummaryGenerator:
                 "dimension": metrics.get("dimension", ""),
                 "rule_description": metrics.get("rule_description", ""),
                 "category": metrics.get("category", ""),
+                "week_group": metrics.get("week_group", 0),
+                "week_start_date": metrics.get("week_start_date", ""),
+                "week_end_date": metrics.get("week_end_date", ""),
                 "business_date_latest": metrics.get("business_date_latest", ""),
                 "dataset_record_count_latest": metrics.get(
                     "dataset_record_count_latest", 0
@@ -121,23 +116,12 @@ class SummaryGenerator:
                 "filtered_record_count_latest": metrics.get(
                     "filtered_record_count_latest", 0
                 ),
-                "pass_count_total": metrics.get("pass_count_total", 0),
-                "fail_count_total": metrics.get("fail_count_total", 0),
-                "warn_count_total": metrics.get("warn_count_total", 0),
-                "pass_count_1m": metrics.get("pass_count_1m", 0),
-                "fail_count_1m": metrics.get("fail_count_1m", 0),
-                "warn_count_1m": metrics.get("warn_count_1m", 0),
-                "pass_count_3m": metrics.get("pass_count_3m", 0),
-                "fail_count_3m": metrics.get("fail_count_3m", 0),
-                "warn_count_3m": metrics.get("warn_count_3m", 0),
-                "pass_count_12m": metrics.get("pass_count_12m", 0),
-                "fail_count_12m": metrics.get("fail_count_12m", 0),
-                "warn_count_12m": metrics.get("warn_count_12m", 0),
-                "fail_rate_total": metrics.get("fail_rate_total", 0.0),
-                "fail_rate_1m": metrics.get("fail_rate_1m", 0.0),
-                "fail_rate_3m": metrics.get("fail_rate_3m", 0.0),
-                "fail_rate_12m": metrics.get("fail_rate_12m", 0.0),
-                "trend_flag": metrics.get("trend_flag", "="),
+                "pass_count": metrics.get("pass_count", 0),
+                "fail_count": metrics.get("fail_count", 0),
+                "warn_count": metrics.get("warn_count", 0),
+                "fail_rate": metrics.get("fail_rate", 0.0),
+                "previous_period_fail_rate": metrics.get("previous_period_fail_rate", None),
+                "trend_flag": metrics.get("trend_flag", "equal"),
                 "last_execution_level": metrics.get("last_execution_level", ""),
             }
             rows.append(row)
@@ -155,7 +139,7 @@ class SummaryGenerator:
             raise
 
     def generate_nl_sentences(
-        self, aggregated_data: Dict[Tuple[str, str, str, str, int], Dict[str, Any]]
+        self, aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]]
     ) -> Path:
         """
         Generate natural language sentences following exact template.
@@ -170,30 +154,33 @@ class SummaryGenerator:
 
         sentences = []
         for key, metrics in aggregated_data.items():
-            source, tenant_id, dataset_uuid, dataset_name, rule_code = key
+            source, tenant_id, dataset_uuid, dataset_name, rule_code, week_group = key
 
             # Extract required fields
             business_date_latest = metrics.get("business_date_latest", date.today())
+            week_start_date = metrics.get("week_start_date", "")
+            week_end_date = metrics.get("week_end_date", "")
             rule_name = metrics.get("rule_name", "")
-            fail_count_total = metrics.get("fail_count_total", 0)
-            warn_count_total = metrics.get("warn_count_total", 0)
-            pass_count_total = metrics.get("pass_count_total", 0)
-            fail_rate_total = metrics.get("fail_rate_total", 0.0)
-            fail_rate_1m = metrics.get("fail_rate_1m", 0.0)
-            fail_rate_3m = metrics.get("fail_rate_3m", 0.0)
-            fail_rate_12m = metrics.get("fail_rate_12m", 0.0)
-            trend_flag = metrics.get("trend_flag", "=")
+            fail_count = metrics.get("fail_count", 0)
+            warn_count = metrics.get("warn_count", 0)
+            pass_count = metrics.get("pass_count", 0)
+            fail_rate = metrics.get("fail_rate", 0.0)
+            previous_fail_rate = metrics.get("previous_period_fail_rate", None)
+            trend_flag = metrics.get("trend_flag", "equal")
 
-            # Generate sentence following updated template with warnings
+            # Generate sentence following weekly template
+            period_desc = f"week group {week_group} ({week_start_date} to {week_end_date})"
+            trend_desc = f"trend {trend_flag}"
+            if previous_fail_rate is not None:
+                trend_desc += f" (vs previous period: {previous_fail_rate:.2%})"
+            
             sentence = (
-                f'• On {business_date_latest}, dataset "{dataset_name}" '
+                f'• For {period_desc}, dataset "{dataset_name}" '
                 f"(source: {source}, tenant: {tenant_id}, UUID: {dataset_uuid}) "
                 f'under rule "{rule_name}" [{rule_code}] '
-                f"recorded {fail_count_total} failures, {warn_count_total} warnings, and {pass_count_total} passes "
-                f"overall "
-                f"(fail-rate {fail_rate_total:.2%}; 1-month {fail_rate_1m:.2%}, "
-                f"3-month {fail_rate_3m:.2%}, 12-month {fail_rate_12m:.2%}) "
-                f"— trend {trend_flag}."
+                f"recorded {fail_count} failures, {warn_count} warnings, and {pass_count} passes "
+                f"(fail-rate {fail_rate:.2%}) "
+                f"— {trend_desc}. Latest business date: {business_date_latest}."
             )
             sentences.append(sentence)
 
@@ -217,7 +204,7 @@ class SummaryGenerator:
 
 
 def generate_full_summary_csv(
-    aggregated_data: Dict[Tuple[str, str, str, str, int], Dict[str, Any]],
+    aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
     output_dir: str,
 ) -> Path:
     """
@@ -235,7 +222,7 @@ def generate_full_summary_csv(
 
 
 def generate_nl_sentences(
-    aggregated_data: Dict[Tuple[str, str, str, str, int], Dict[str, Any]],
+    aggregated_data: Dict[Tuple[str, str, str, str, int, int], Dict[str, Any]],
     output_dir: str,
 ) -> Path:
     """

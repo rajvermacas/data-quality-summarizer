@@ -89,6 +89,13 @@ Examples:
         help="Output directory for generated artifacts (default: resources/artifacts)",
     )
 
+    parser.add_argument(
+        "--weeks",
+        type=int,
+        default=1,
+        help="Number of weeks to group together for aggregation (default: 1)",
+    )
+
     args = parser.parse_args()
     args.command = 'summarize'  # Set default command for backward compatibility
     return args
@@ -138,6 +145,7 @@ def run_pipeline(
     rule_metadata_file: str,
     chunk_size: int = 20000,
     output_dir: str = "resources/artifacts",
+    weeks: int = 1,
 ) -> Dict[str, Any]:
     """
     Execute the complete data quality summarization pipeline.
@@ -147,6 +155,7 @@ def run_pipeline(
         rule_metadata_file: Path to rule metadata JSON file
         chunk_size: Number of rows per processing chunk
         output_dir: Directory for output artifacts
+        weeks: Number of weeks to group together for aggregation
 
     Returns:
         Dictionary containing pipeline execution results
@@ -163,7 +172,7 @@ def run_pipeline(
         logger.info("Initializing pipeline components...")
 
         ingester = CSVIngester(chunk_size=chunk_size)
-        aggregator = StreamingAggregator()
+        aggregator = StreamingAggregator(weeks=weeks)
         summarizer = SummaryGenerator(output_dir=output_dir)
 
         # Stage 2: Load rule metadata
@@ -211,7 +220,7 @@ def run_pipeline(
         logger.info("Converting metrics to summary format...")
         summary_data = {}
         for key, metrics in aggregator.accumulator.items():
-            source, tenant_id, dataset_uuid, dataset_name, rule_code = key
+            source, tenant_id, dataset_uuid, dataset_name, rule_code, week_group = key
 
             # Get rule metadata
             rule_info = rule_metadata.get(rule_code)
@@ -226,25 +235,17 @@ def run_pipeline(
                 "dimension": rule_info.dimension,
                 "rule_description": rule_info.rule_description,
                 "category": rule_info.category,
+                "week_group": metrics.week_group,
+                "week_start_date": metrics.week_start_date,
+                "week_end_date": metrics.week_end_date,
                 "business_date_latest": metrics.business_date_latest,
                 "dataset_record_count_latest": metrics.dataset_record_count_latest,
                 "filtered_record_count_latest": metrics.filtered_record_count_latest,
-                "pass_count_total": metrics.pass_count_total,
-                "fail_count_total": metrics.fail_count_total,
-                "warn_count_total": metrics.warn_count_total,
-                "pass_count_1m": metrics.pass_count_1m,
-                "fail_count_1m": metrics.fail_count_1m,
-                "warn_count_1m": metrics.warn_count_1m,
-                "pass_count_3m": metrics.pass_count_3m,
-                "fail_count_3m": metrics.fail_count_3m,
-                "warn_count_3m": metrics.warn_count_3m,
-                "pass_count_12m": metrics.pass_count_12m,
-                "fail_count_12m": metrics.fail_count_12m,
-                "warn_count_12m": metrics.warn_count_12m,
-                "fail_rate_total": metrics.fail_rate_total,
-                "fail_rate_1m": metrics.fail_rate_1m,
-                "fail_rate_3m": metrics.fail_rate_3m,
-                "fail_rate_12m": metrics.fail_rate_12m,
+                "pass_count": metrics.pass_count,
+                "fail_count": metrics.fail_count,
+                "warn_count": metrics.warn_count,
+                "fail_rate": metrics.fail_rate,
+                "previous_period_fail_rate": metrics.previous_period_fail_rate,
                 "trend_flag": metrics.trend_flag,
                 "last_execution_level": metrics.last_execution_level,
             }
@@ -454,6 +455,7 @@ def main() -> int:
                 rule_metadata_file=args.rule_metadata_file,
                 chunk_size=args.chunk_size,
                 output_dir=args.output_dir,
+                weeks=args.weeks,
             )
 
             if result["success"]:
