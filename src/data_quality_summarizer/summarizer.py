@@ -63,7 +63,7 @@ class SummaryGenerator:
         """
         self._ensure_output_directory()
 
-        # Define exact 27-column schema
+        # Define exact 31-column schema (updated to include warnings)
         columns = [
             "source",
             "tenant_id",
@@ -80,12 +80,16 @@ class SummaryGenerator:
             "filtered_record_count_latest",
             "pass_count_total",
             "fail_count_total",
+            "warn_count_total",
             "pass_count_1m",
             "fail_count_1m",
+            "warn_count_1m",
             "pass_count_3m",
             "fail_count_3m",
+            "warn_count_3m",
             "pass_count_12m",
             "fail_count_12m",
+            "warn_count_12m",
             "fail_rate_total",
             "fail_rate_1m",
             "fail_rate_3m",
@@ -119,12 +123,16 @@ class SummaryGenerator:
                 ),
                 "pass_count_total": metrics.get("pass_count_total", 0),
                 "fail_count_total": metrics.get("fail_count_total", 0),
+                "warn_count_total": metrics.get("warn_count_total", 0),
                 "pass_count_1m": metrics.get("pass_count_1m", 0),
                 "fail_count_1m": metrics.get("fail_count_1m", 0),
+                "warn_count_1m": metrics.get("warn_count_1m", 0),
                 "pass_count_3m": metrics.get("pass_count_3m", 0),
                 "fail_count_3m": metrics.get("fail_count_3m", 0),
+                "warn_count_3m": metrics.get("warn_count_3m", 0),
                 "pass_count_12m": metrics.get("pass_count_12m", 0),
                 "fail_count_12m": metrics.get("fail_count_12m", 0),
+                "warn_count_12m": metrics.get("warn_count_12m", 0),
                 "fail_rate_total": metrics.get("fail_rate_total", 0.0),
                 "fail_rate_1m": metrics.get("fail_rate_1m", 0.0),
                 "fail_rate_3m": metrics.get("fail_rate_3m", 0.0),
@@ -168,6 +176,7 @@ class SummaryGenerator:
             business_date_latest = metrics.get("business_date_latest", date.today())
             rule_name = metrics.get("rule_name", "")
             fail_count_total = metrics.get("fail_count_total", 0)
+            warn_count_total = metrics.get("warn_count_total", 0)
             pass_count_total = metrics.get("pass_count_total", 0)
             fail_rate_total = metrics.get("fail_rate_total", 0.0)
             fail_rate_1m = metrics.get("fail_rate_1m", 0.0)
@@ -175,12 +184,12 @@ class SummaryGenerator:
             fail_rate_12m = metrics.get("fail_rate_12m", 0.0)
             trend_flag = metrics.get("trend_flag", "=")
 
-            # Generate sentence following exact template
+            # Generate sentence following updated template with warnings
             sentence = (
                 f'• On {business_date_latest}, dataset "{dataset_name}" '
                 f"(source: {source}, tenant: {tenant_id}, UUID: {dataset_uuid}) "
                 f'under rule "{rule_name}" [{rule_code}] '
-                f"recorded {fail_count_total} failures and {pass_count_total} passes "
+                f"recorded {fail_count_total} failures, {warn_count_total} warnings, and {pass_count_total} passes "
                 f"overall "
                 f"(fail-rate {fail_rate_total:.2%}; 1-month {fail_rate_1m:.2%}, "
                 f"3-month {fail_rate_3m:.2%}, 12-month {fail_rate_12m:.2%}) "

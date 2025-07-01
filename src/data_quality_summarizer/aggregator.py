@@ -33,15 +33,19 @@ class AggregationMetrics:
     metrics like fail rates and trend flags.
     """
 
-    # Count fields - raw pass/fail counts
+    # Count fields - raw pass/fail/warning counts
     pass_count_total: int = 0
     fail_count_total: int = 0
+    warn_count_total: int = 0
     pass_count_1m: int = 0
     fail_count_1m: int = 0
+    warn_count_1m: int = 0
     pass_count_3m: int = 0
     fail_count_3m: int = 0
+    warn_count_3m: int = 0
     pass_count_12m: int = 0
     fail_count_12m: int = 0
+    warn_count_12m: int = 0
 
     # Calculated fields - derived metrics
     fail_rate_total: Optional[float] = None
@@ -112,13 +116,13 @@ class StreamingAggregator:
 
     def _parse_results_json(self, results_str: str) -> Optional[str]:
         """
-        Parse JSON results string to extract pass/fail status.
+        Parse JSON results string to extract pass/fail/warning status.
 
         Args:
             results_str: JSON string containing results data
 
         Returns:
-            'Pass' or 'Fail' if successfully parsed, None otherwise
+            'Pass', 'Fail', or 'Warning' if successfully parsed, None otherwise
         """
         try:
             results_dict = json.loads(results_str)
@@ -195,11 +199,13 @@ class StreamingAggregator:
 
         metrics = self.accumulator[key]
 
-        # Update pass/fail counts
+        # Update pass/fail/warning counts
         if result_status == "Pass":
             metrics.pass_count_total += 1
         elif result_status == "Fail":
             metrics.fail_count_total += 1
+        elif result_status == "Warning":
+            metrics.warn_count_total += 1
         else:
             logger.warning(f"Unknown result status: {result_status} for key: {key}")
 
@@ -243,10 +249,13 @@ class StreamingAggregator:
         # Reset rolling window counts
         metrics.pass_count_1m = 0
         metrics.fail_count_1m = 0
+        metrics.warn_count_1m = 0
         metrics.pass_count_3m = 0
         metrics.fail_count_3m = 0
+        metrics.warn_count_3m = 0
         metrics.pass_count_12m = 0
         metrics.fail_count_12m = 0
+        metrics.warn_count_12m = 0
 
         # Count entries within each time window
         for row_entry in metrics.row_data:
@@ -259,6 +268,8 @@ class StreamingAggregator:
                     metrics.pass_count_12m += 1
                 elif result_status == "Fail":
                     metrics.fail_count_12m += 1
+                elif result_status == "Warning":
+                    metrics.warn_count_12m += 1
 
             # 3-month window
             if entry_date >= cutoff_3m:
@@ -266,6 +277,8 @@ class StreamingAggregator:
                     metrics.pass_count_3m += 1
                 elif result_status == "Fail":
                     metrics.fail_count_3m += 1
+                elif result_status == "Warning":
+                    metrics.warn_count_3m += 1
 
             # 1-month window (most restrictive)
             if entry_date >= cutoff_1m:
@@ -273,12 +286,14 @@ class StreamingAggregator:
                     metrics.pass_count_1m += 1
                 elif result_status == "Fail":
                     metrics.fail_count_1m += 1
+                elif result_status == "Warning":
+                    metrics.warn_count_1m += 1
 
         logger.debug(
             f"Calculated rolling windows for key {key}: "
-            f"1m({metrics.pass_count_1m}P/{metrics.fail_count_1m}F), "
-            f"3m({metrics.pass_count_3m}P/{metrics.fail_count_3m}F), "
-            f"12m({metrics.pass_count_12m}P/{metrics.fail_count_12m}F)"
+            f"1m({metrics.pass_count_1m}P/{metrics.fail_count_1m}F/{metrics.warn_count_1m}W), "
+            f"3m({metrics.pass_count_3m}P/{metrics.fail_count_3m}F/{metrics.warn_count_3m}W), "
+            f"12m({metrics.pass_count_12m}P/{metrics.fail_count_12m}F/{metrics.warn_count_12m}W)"
         )
 
     def _calculate_fail_rates(self, metrics: AggregationMetrics):

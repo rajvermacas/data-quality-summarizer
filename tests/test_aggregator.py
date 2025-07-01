@@ -68,6 +68,7 @@ class TestStreamingAggregator:
         metrics = aggregator.accumulator[key]
         assert metrics.pass_count_total == 1
         assert metrics.fail_count_total == 0
+        assert metrics.warn_count_total == 0
 
     def test_process_row_with_fail_result(self):
         """Test processing row with fail result"""
@@ -94,6 +95,34 @@ class TestStreamingAggregator:
         metrics = aggregator.accumulator[key]
         assert metrics.pass_count_total == 0
         assert metrics.fail_count_total == 1
+        assert metrics.warn_count_total == 0
+
+    def test_process_row_with_warning_result(self):
+        """Test processing row with warning result"""
+        aggregator = StreamingAggregator()
+
+        row = pd.Series(
+            {
+                "source": "test_system",
+                "tenant_id": "tenant_123",
+                "dataset_uuid": "uuid-456",
+                "dataset_name": "Test Dataset",
+                "rule_code": 101,
+                "business_date": "2024-01-15",
+                "results": '{"result": "Warning"}',
+                "dataset_record_count": 1000,
+                "filtered_record_count": 950,
+                "level_of_execution": "DATASET",
+            }
+        )
+
+        aggregator.process_row(row)
+
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        metrics = aggregator.accumulator[key]
+        assert metrics.pass_count_total == 0
+        assert metrics.fail_count_total == 0
+        assert metrics.warn_count_total == 1
 
     def test_malformed_json_results_handling(self):
         """Test graceful handling of malformed JSON in results"""
