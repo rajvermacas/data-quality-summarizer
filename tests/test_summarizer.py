@@ -26,28 +26,26 @@ class TestSummaryGenerator:
     def sample_aggregated_data(self):
         """Sample aggregated data for testing."""
         return {
-            ("SRC1", "tenant1", "uuid1", "Dataset A", 101): {
+            ("SRC1", "tenant1", "uuid1", "Dataset A", 101, 0): {
                 "rule_name": "ROW_COUNT",
                 "rule_type": "DATASET",
                 "dimension": "Correctness",
                 "rule_description": "Row count validation",
                 "category": 1,
+                "week_group": 0,
+                "week_start_date": date(2024, 1, 15),
+                "week_end_date": date(2024, 1, 21),
                 "business_date_latest": date(2024, 1, 15),
                 "dataset_record_count_latest": 50000,
                 "filtered_record_count_latest": 48000,
-                "pass_count_total": 100,
-                "fail_count_total": 5,
-                "pass_count_1m": 30,
-                "fail_count_1m": 2,
-                "pass_count_3m": 80,
-                "fail_count_3m": 4,
-                "pass_count_12m": 100,
-                "fail_count_12m": 5,
-                "fail_rate_total": 0.0476,
-                "fail_rate_1m": 0.0625,
-                "fail_rate_3m": 0.0476,
-                "fail_rate_12m": 0.0476,
-                "trend_flag": "up",
+                "dataset_record_count_total": 150000,
+                "filtered_record_count_total": 144000,
+                "pass_count": 100,
+                "fail_count": 5,
+                "warn_count": 0,
+                "fail_rate": 0.0476,
+                "previous_period_fail_rate": 0.0625,
+                "trend_flag": "down",
                 "last_execution_level": "DATASET",
             }
         }
@@ -74,7 +72,7 @@ class TestSummaryGenerator:
     def test_generate_csv_with_exact_schema(
         self, sample_aggregated_data, temp_output_dir
     ):
-        """Test CSV generation with exact 27-column schema."""
+        """Test CSV generation with exact 23-column schema."""
         generator = SummaryGenerator(output_dir=temp_output_dir)
         csv_path = generator.generate_csv(sample_aggregated_data)
 
@@ -95,26 +93,22 @@ class TestSummaryGenerator:
             "dimension",
             "rule_description",
             "category",
+            "week_group",
+            "week_start_date",
+            "week_end_date",
             "business_date_latest",
-            "dataset_record_count_latest",
-            "filtered_record_count_latest",
-            "pass_count_total",
-            "fail_count_total",
-            "pass_count_1m",
-            "fail_count_1m",
-            "pass_count_3m",
-            "fail_count_3m",
-            "pass_count_12m",
-            "fail_count_12m",
-            "fail_rate_total",
-            "fail_rate_1m",
-            "fail_rate_3m",
-            "fail_rate_12m",
+            "dataset_record_count_total",
+            "filtered_record_count_total",
+            "pass_count",
+            "fail_count",
+            "warn_count",
+            "fail_rate",
+            "previous_period_fail_rate",
             "trend_flag",
             "last_execution_level",
         ]
 
-        assert len(df.columns) == 27, f"Expected 27 columns, got {len(df.columns)}"
+        assert len(df.columns) == 23, f"Expected 23 columns, got {len(df.columns)}"
         assert list(df.columns) == expected_columns
         assert len(df) == 1  # One row from sample data
 

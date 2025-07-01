@@ -151,7 +151,7 @@ class TestStreamingAggregator:
         # Should not raise exception, should log warning
         aggregator.process_row(row)
 
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         # Should still create entry but with neutral counts
         assert key in aggregator.accumulator
 
@@ -193,10 +193,10 @@ class TestStreamingAggregator:
             row = pd.Series(row_data)
             aggregator.process_row(row)
 
-        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101)
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         metrics = aggregator.accumulator[key]
-        assert metrics.pass_count_total == 2
-        assert metrics.fail_count_total == 1
+        assert metrics.pass_count == 2
+        assert metrics.fail_count == 1
 
     def test_latest_business_date_tracking(self):
         """Test latest business_date is tracked correctly"""
@@ -392,25 +392,21 @@ class TestAggregationMetrics:
         metrics = AggregationMetrics()
 
         # Count fields should start at 0
-        assert metrics.pass_count_total == 0
-        assert metrics.fail_count_total == 0
-        assert metrics.pass_count_1m == 0
-        assert metrics.fail_count_1m == 0
-        assert metrics.pass_count_3m == 0
-        assert metrics.fail_count_3m == 0
-        assert metrics.pass_count_12m == 0
-        assert metrics.fail_count_12m == 0
+        assert metrics.pass_count == 0
+        assert metrics.fail_count == 0
+        assert metrics.warn_count == 0
 
         # Calculated fields should start as None
-        assert metrics.fail_rate_total is None
-        assert metrics.fail_rate_1m is None
-        assert metrics.fail_rate_3m is None
-        assert metrics.fail_rate_12m is None
+        assert metrics.fail_rate is None
         assert metrics.trend_flag is None
         assert metrics.business_date_latest is None
         assert metrics.dataset_record_count_latest is None
         assert metrics.filtered_record_count_latest is None
         assert metrics.last_execution_level is None
+        
+        # New aggregated total fields should start at 0
+        assert metrics.dataset_record_count_total == 0
+        assert metrics.filtered_record_count_total == 0
 
     def test_metrics_update_latest_values(self):
         """Test updating latest values in metrics"""
@@ -679,3 +675,134 @@ class TestWeeklyGrouping:
                 
                 # Verify end date is always Sunday
                 assert end_date.weekday() == 6, f"End date {end_date} is not Sunday"
+
+
+class TestRecordCountAggregation:
+    """Test suite for aggregated record count functionality"""
+
+    def test_dataset_record_count_aggregation(self):
+        """Test that dataset_record_count values are aggregated correctly"""
+        aggregator = StreamingAggregator()
+        
+        # Process multiple rows with different record counts
+        base_row = {
+            "source": "test_system",
+            "tenant_id": "tenant_123",
+            "dataset_uuid": "uuid-456",
+            "dataset_name": "Test Dataset",
+            "rule_code": 101,
+            "business_date": "2024-01-15",
+            "results": '{"result": "Pass"}',
+            "level_of_execution": "DATASET",
+        }
+        
+        # Process 3 rows with different dataset_record_count values
+        record_counts = [1000, 1500, 2000]
+        for count in record_counts:
+            row = pd.Series({
+                **base_row,
+                "dataset_record_count": count,
+                "filtered_record_count": count - 50,  # Always 50 less
+            })
+            aggregator.process_row(row)
+        
+        # Verify aggregation
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        metrics = aggregator.accumulator[key]
+        
+        # Total should be sum of all record counts
+        expected_total = sum(record_counts)  # 1000 + 1500 + 2000 = 4500
+        assert metrics.dataset_record_count_total == expected_total
+        
+        # Latest should be the last processed value
+        assert metrics.dataset_record_count_latest == 2000
+        
+        # Filtered record count should also be aggregated
+        expected_filtered_total = sum(count - 50 for count in record_counts)  # 950 + 1450 + 1950 = 4350
+        assert metrics.filtered_record_count_total == expected_filtered_total
+        assert metrics.filtered_record_count_latest == 1950
+
+    def test_record_count_aggregation_across_multiple_weeks(self):
+        """Test record count aggregation with weekly grouping"""
+        aggregator = StreamingAggregator(weeks=1)
+        
+        base_row = {
+            "source": "test_system", 
+            "tenant_id": "tenant_123",
+            "dataset_uuid": "uuid-456",
+            "dataset_name": "Test Dataset",
+            "rule_code": 101,
+            "results": '{"result": "Pass"}',
+            "level_of_execution": "DATASET",
+        }
+        
+        # Week 1: 2 rows with different counts
+        week1_counts = [1000, 1200]
+        for count in week1_counts:
+            row = pd.Series({
+                **base_row,
+                "business_date": "2024-01-15",  # Week 1
+                "dataset_record_count": count,
+                "filtered_record_count": count - 100,
+            })
+            aggregator.process_row(row)
+        
+        # Week 2: 3 rows with different counts  
+        week2_counts = [1500, 1800, 2000]
+        for count in week2_counts:
+            row = pd.Series({
+                **base_row,
+                "business_date": "2024-01-22",  # Week 2
+                "dataset_record_count": count,
+                "filtered_record_count": count - 100,
+            })
+            aggregator.process_row(row)
+        
+        # Verify week 1 aggregation
+        key_week1 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        metrics_week1 = aggregator.accumulator[key_week1]
+        
+        assert metrics_week1.dataset_record_count_total == sum(week1_counts)  # 2200
+        assert metrics_week1.filtered_record_count_total == sum(count - 100 for count in week1_counts)  # 2000
+        assert metrics_week1.dataset_record_count_latest == 1200  # Last value in week 1
+        
+        # Verify week 2 aggregation
+        key_week2 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 1)
+        metrics_week2 = aggregator.accumulator[key_week2]
+        
+        assert metrics_week2.dataset_record_count_total == sum(week2_counts)  # 5300
+        assert metrics_week2.filtered_record_count_total == sum(count - 100 for count in week2_counts)  # 5000
+        assert metrics_week2.dataset_record_count_latest == 2000  # Last value in week 2
+
+    def test_zero_record_counts_handled_correctly(self):
+        """Test that zero record counts are handled correctly in aggregation"""
+        aggregator = StreamingAggregator()
+        
+        # Process rows with zero and non-zero counts
+        test_counts = [0, 1000, 0, 500]
+        
+        for i, count in enumerate(test_counts):
+            row = pd.Series({
+                "source": "test_system",
+                "tenant_id": "tenant_123", 
+                "dataset_uuid": "uuid-456",
+                "dataset_name": "Test Dataset",
+                "rule_code": 101,
+                "business_date": f"2024-01-{15 + i}",  # Different dates
+                "results": '{"result": "Pass"}',
+                "dataset_record_count": count,
+                "filtered_record_count": count,
+                "level_of_execution": "DATASET",
+            })
+            aggregator.process_row(row)
+        
+        key = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
+        metrics = aggregator.accumulator[key]
+        
+        # Total should include zeros: 0 + 1000 + 0 + 500 = 1500
+        assert metrics.dataset_record_count_total == 1500
+        assert metrics.filtered_record_count_total == 1500
+        
+        # Latest should be the last processed value (500)
+        assert metrics.dataset_record_count_latest == 500
+        assert metrics.filtered_record_count_latest == 500

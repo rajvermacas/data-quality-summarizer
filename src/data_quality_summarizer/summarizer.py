@@ -79,8 +79,8 @@ class SummaryGenerator:
             "week_start_date",
             "week_end_date",
             "business_date_latest",
-            "dataset_record_count_latest",
-            "filtered_record_count_latest",
+            "dataset_record_count_total",
+            "filtered_record_count_total",
             "pass_count",
             "fail_count",
             "warn_count",
@@ -110,11 +110,11 @@ class SummaryGenerator:
                 "week_start_date": metrics.get("week_start_date", ""),
                 "week_end_date": metrics.get("week_end_date", ""),
                 "business_date_latest": metrics.get("business_date_latest", ""),
-                "dataset_record_count_latest": metrics.get(
-                    "dataset_record_count_latest", 0
+                "dataset_record_count_total": metrics.get(
+                    "dataset_record_count_total", 0
                 ),
-                "filtered_record_count_latest": metrics.get(
-                    "filtered_record_count_latest", 0
+                "filtered_record_count_total": metrics.get(
+                    "filtered_record_count_total", 0
                 ),
                 "pass_count": metrics.get("pass_count", 0),
                 "fail_count": metrics.get("fail_count", 0),

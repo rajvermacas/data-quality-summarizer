@@ -241,6 +241,8 @@ def run_pipeline(
                 "business_date_latest": metrics.business_date_latest,
                 "dataset_record_count_latest": metrics.dataset_record_count_latest,
                 "filtered_record_count_latest": metrics.filtered_record_count_latest,
+                "dataset_record_count_total": metrics.dataset_record_count_total,
+                "filtered_record_count_total": metrics.filtered_record_count_total,
                 "pass_count": metrics.pass_count,
                 "fail_count": metrics.fail_count,
                 "warn_count": metrics.warn_count,

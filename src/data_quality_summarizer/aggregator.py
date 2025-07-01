@@ -53,6 +53,10 @@ class AggregationMetrics:
     filtered_record_count_latest: Optional[int] = None
     last_execution_level: Optional[str] = None
 
+    # Aggregated totals for this period
+    dataset_record_count_total: int = 0
+    filtered_record_count_total: int = 0
+
     # Previous period fail rate for trend calculation
     previous_period_fail_rate: Optional[float] = None
 
@@ -268,13 +272,17 @@ class StreamingAggregator:
             logger.warning(f"Unknown result status: {result_status} for key: {key}")
 
         # Update latest values for this period
-        if metrics.business_date_latest is None or business_date > metrics.business_date_latest:
+        if metrics.business_date_latest is None or business_date >= metrics.business_date_latest:
             metrics.update_latest_values(
                 business_date=business_date,
                 dataset_record_count=int(row["dataset_record_count"]),
                 filtered_record_count=int(row["filtered_record_count"]),
                 level_of_execution=str(row["level_of_execution"]),
             )
+
+        # Accumulate record counts for aggregated totals
+        metrics.dataset_record_count_total += int(row["dataset_record_count"])
+        metrics.filtered_record_count_total += int(row["filtered_record_count"])
 
         # Store row data for this period
         row_entry = {
