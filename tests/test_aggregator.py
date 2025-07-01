@@ -72,7 +72,7 @@ class TestStreamingAggregator:
         metrics = aggregator.accumulator[key]
         assert metrics.pass_count == 1
         assert metrics.fail_count == 0
-        assert metrics.warn_count == 0
+        assert metrics.warning_count == 0
         assert metrics.week_group == 0
 
     def test_process_row_with_fail_result(self):
@@ -100,7 +100,7 @@ class TestStreamingAggregator:
         metrics = aggregator.accumulator[key]
         assert metrics.pass_count == 0
         assert metrics.fail_count == 1
-        assert metrics.warn_count == 0
+        assert metrics.warning_count == 0
 
     def test_process_row_with_warning_result(self):
         """Test processing row with warning result"""
@@ -127,7 +127,7 @@ class TestStreamingAggregator:
         metrics = aggregator.accumulator[key]
         assert metrics.pass_count == 0
         assert metrics.fail_count == 0
-        assert metrics.warn_count == 1
+        assert metrics.warning_count == 1
 
     def test_malformed_json_results_handling(self):
         """Test graceful handling of malformed JSON in results"""
@@ -400,7 +400,7 @@ class TestAggregationMetrics:
         # Count fields should start at 0
         assert metrics.pass_count == 0
         assert metrics.fail_count == 0
-        assert metrics.warn_count == 0
+        assert metrics.warning_count == 0
 
         # Calculated fields should start as None
         assert metrics.fail_rate is None

@@ -36,7 +36,7 @@ class AggregationMetrics:
     # Count fields - raw pass/fail/warning counts for this period
     pass_count: int = 0
     fail_count: int = 0
-    warn_count: int = 0
+    warning_count: int = 0
 
     # Calculated fields - derived metrics
     fail_rate: Optional[float] = None
@@ -44,8 +44,8 @@ class AggregationMetrics:
 
     # Period information
     week_group: int = 0  # Which N-week group this represents
-    week_start_date: Optional[date] = None
-    week_end_date: Optional[date] = None
+    business_week_start_date: Optional[date] = None
+    business_week_end_date: Optional[date] = None
     business_date_latest: Optional[date] = None
 
     # Latest values from most recent row in this period
@@ -254,8 +254,8 @@ class StreamingAggregator:
             start_date, end_date = self._get_week_boundaries(week_group)
             self.accumulator[key] = AggregationMetrics(
                 week_group=week_group,
-                week_start_date=start_date,
-                week_end_date=end_date
+                business_week_start_date=start_date,
+                business_week_end_date=end_date
             )
             logger.debug(f"Created new accumulator entry for key: {key}")
 
@@ -267,7 +267,7 @@ class StreamingAggregator:
         elif result_status == "Fail":
             metrics.fail_count += 1
         elif result_status == "Warning":
-            metrics.warn_count += 1
+            metrics.warning_count += 1
         else:
             logger.warning(f"Unknown result status: {result_status} for key: {key}")
 

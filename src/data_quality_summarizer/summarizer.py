@@ -78,14 +78,14 @@ class SummaryGenerator:
             "rule_description",
             "category",
             "week_group",
-            "week_start_date",
-            "week_end_date",
+            "business_week_start_date",
+            "business_week_end_date",
             "business_date_latest",
             "dataset_record_count_total",
             "filtered_record_count_total",
             "pass_count",
             "fail_count",
-            "warn_count",
+            "warning_count",
             "fail_rate",
             "previous_period_fail_rate",
             "trend_flag",
@@ -109,8 +109,8 @@ class SummaryGenerator:
                 "rule_description": metrics.get("rule_description", ""),
                 "category": metrics.get("category", ""),
                 "week_group": metrics.get("week_group", 0),
-                "week_start_date": metrics.get("week_start_date", ""),
-                "week_end_date": metrics.get("week_end_date", ""),
+                "business_week_start_date": metrics.get("business_week_start_date", ""),
+                "business_week_end_date": metrics.get("business_week_end_date", ""),
                 "business_date_latest": metrics.get("business_date_latest", ""),
                 "dataset_record_count_total": metrics.get(
                     "dataset_record_count_total", 0
@@ -120,7 +120,7 @@ class SummaryGenerator:
                 ),
                 "pass_count": metrics.get("pass_count", 0),
                 "fail_count": metrics.get("fail_count", 0),
-                "warn_count": metrics.get("warn_count", 0),
+                "warning_count": metrics.get("warning_count", 0),
                 "fail_rate": metrics.get("fail_rate", 0.0),
                 "previous_period_fail_rate": metrics.get("previous_period_fail_rate", None),
                 "trend_flag": metrics.get("trend_flag", "equal"),
@@ -170,18 +170,18 @@ class SummaryGenerator:
 
             # Extract required fields
             business_date_latest = metrics.get("business_date_latest", date.today())
-            week_start_date = metrics.get("week_start_date", "")
-            week_end_date = metrics.get("week_end_date", "")
+            business_week_start_date = metrics.get("business_week_start_date", "")
+            business_week_end_date = metrics.get("business_week_end_date", "")
             rule_name = metrics.get("rule_name", "")
             fail_count = metrics.get("fail_count", 0)
-            warn_count = metrics.get("warn_count", 0)
+            warning_count = metrics.get("warning_count", 0)
             pass_count = metrics.get("pass_count", 0)
             fail_rate = metrics.get("fail_rate", 0.0)
             previous_fail_rate = metrics.get("previous_period_fail_rate", None)
             trend_flag = metrics.get("trend_flag", "equal")
 
             # Generate sentence following weekly template
-            period_desc = f"week group {week_group} ({week_start_date} to {week_end_date})"
+            period_desc = f"week group {week_group} ({business_week_start_date} to {business_week_end_date})"
             trend_desc = f"trend {trend_flag}"
             if previous_fail_rate is not None:
                 trend_desc += f" (vs previous period: {previous_fail_rate:.2f}%)"
@@ -190,7 +190,7 @@ class SummaryGenerator:
                 f'• For {period_desc}, dataset "{dataset_name}" '
                 f"(source: {source}, tenant: {tenant_id}, UUID: {dataset_uuid}) "
                 f'under rule "{rule_name}" [{rule_code}] '
-                f"recorded {fail_count} failures, {warn_count} warnings, and {pass_count} passes "
+                f"recorded {fail_count} failures, {warning_count} warnings, and {pass_count} passes "
                 f"(fail-rate {fail_rate:.2f}%) "
                 f"— {trend_desc}. Latest business date: {business_date_latest}."
             )
