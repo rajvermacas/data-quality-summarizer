@@ -138,6 +138,32 @@ class TestSummaryGenerator:
         assert abs(row["fail_rate_total"] - 0.0476) < 0.0001
         assert row["trend_flag"] == "up"
 
+    def test_decimal_precision_formatting(self, sample_aggregated_data, temp_output_dir):
+        """Test that fail rate columns are formatted to 2 decimal places."""
+        generator = SummaryGenerator(output_dir=temp_output_dir)
+        csv_path = generator.generate_csv(sample_aggregated_data)
+
+        # Read CSV as text to check exact formatting
+        with open(csv_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Check that fail rates are formatted to exactly 2 decimal places
+        lines = content.strip().split("\n")
+        data_line = lines[1]  # Skip header
+        values = data_line.split(",")
+        
+        # Get the fail rate columns (indices 25-28 based on schema)
+        fail_rate_total = values[25]
+        fail_rate_1m = values[26] 
+        fail_rate_3m = values[27]
+        fail_rate_12m = values[28]
+        
+        # Verify 2 decimal place formatting
+        assert fail_rate_total == "0.05", f"Expected '0.05', got '{fail_rate_total}'"
+        assert fail_rate_1m == "0.06", f"Expected '0.06', got '{fail_rate_1m}'"
+        assert fail_rate_3m == "0.05", f"Expected '0.05', got '{fail_rate_3m}'"
+        assert fail_rate_12m == "0.05", f"Expected '0.05', got '{fail_rate_12m}'"
+
     def test_generate_nl_sentences(self, sample_aggregated_data, temp_output_dir):
         """Test natural language sentence generation."""
         generator = SummaryGenerator(output_dir=temp_output_dir)

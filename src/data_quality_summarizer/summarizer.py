@@ -147,7 +147,7 @@ class SummaryGenerator:
         csv_path = self.output_dir / "full_summary.csv"
 
         try:
-            df.to_csv(csv_path, index=False, encoding="utf-8")
+            df.to_csv(csv_path, index=False, encoding="utf-8", float_format="%.2f")
             logger.info(f"Generated CSV summary: {csv_path} ({len(df)} rows)")
             return csv_path
         except Exception as e:
