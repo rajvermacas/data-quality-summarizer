@@ -611,22 +611,24 @@ class TestWeeklyGrouping:
         # Finalize to calculate trends
         aggregator.finalize_aggregation()
         
-        # Check week 1 and week 2 metrics
+        # With backward counting from latest date:
+        # - Week 0 (most recent): 2024-01-22 data (10% fail rate)
+        # - Week 1 (older): 2024-01-15 data (20% fail rate)
         key_week_0 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 0)
         key_week_1 = ("test_system", "tenant_123", "uuid-456", "Test Dataset", 101, 1)
         
         week_0_metrics = aggregator.accumulator[key_week_0]
         week_1_metrics = aggregator.accumulator[key_week_1]
         
-        # Week 0: 20% fail rate, no previous period
-        assert abs(week_0_metrics.fail_rate - 20.0) < 0.01
-        assert week_0_metrics.previous_period_fail_rate is None
-        assert week_0_metrics.trend_flag == "equal"
+        # Week 0 (most recent): 10% fail rate, previous was 20%, so trend should be "down" (improving)
+        assert abs(week_0_metrics.fail_rate - 10.0) < 0.01
+        assert abs(week_0_metrics.previous_period_fail_rate - 20.0) < 0.01
+        assert week_0_metrics.trend_flag == "down"
         
-        # Week 1: 10% fail rate, previous was 20%, so trend should be "down" (improving)
-        assert abs(week_1_metrics.fail_rate - 10.0) < 0.01
-        assert abs(week_1_metrics.previous_period_fail_rate - 20.0) < 0.01
-        assert week_1_metrics.trend_flag == "down"
+        # Week 1 (older): 20% fail rate, no previous period
+        assert abs(week_1_metrics.fail_rate - 20.0) < 0.01
+        assert week_1_metrics.previous_period_fail_rate is None
+        assert week_1_metrics.trend_flag == "equal"
 
     def test_multi_dataset_weekly_grouping(self):
         """Test weekly grouping with multiple datasets"""

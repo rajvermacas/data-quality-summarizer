@@ -130,10 +130,10 @@ class StreamingAggregator:
         if self.earliest_business_date is None:
             return 0
 
-        # Calculate days since earliest date
+        # Calculate total days between dates
         days_since_start = (business_date - self.earliest_business_date).days
         
-        # Calculate week number (0-based)
+        # Calculate week number (0-based) 
         week_number = days_since_start // 7
         
         # Group weeks into N-week periods
@@ -330,6 +330,125 @@ class StreamingAggregator:
         else:
             metrics.trend_flag = "equal"  # Stable
 
+    def _calculate_week_group_from_latest(self, business_date: date) -> int:
+        """
+        Calculate week group counting backward from latest date.
+        
+        Args:
+            business_date: Date to calculate week group for
+            
+        Returns:
+            Week group number (0-based, with 0 being most recent)
+        """
+        if self.latest_business_date is None:
+            return 0
+            
+        # Calculate days before latest date
+        days_before_latest = (self.latest_business_date - business_date).days
+        
+        # Calculate week number (0-based)
+        week_number = days_before_latest // 7
+        
+        # Group weeks into N-week periods
+        week_group = week_number // self.weeks
+        
+        return week_group
+
+    def _recalculate_week_groups(self):
+        """
+        Recalculate all week groups based on latest date (counting backward).
+        This ensures most recent data has lowest week group numbers.
+        """
+        if not self.accumulator:
+            return
+            
+        logger.info("Recalculating week groups based on latest date")
+        
+        # Create new accumulator with corrected week groups
+        new_accumulator = {}
+        
+        # Process each existing entry
+        for old_key, metrics in self.accumulator.items():
+            source, tenant_id, dataset_uuid, dataset_name, rule_code, old_week_group = old_key
+            
+            # For each row in this group, recalculate its week group
+            for row_data in metrics.row_data:
+                business_date = row_data["business_date"]
+                
+                # Calculate new week group from latest date
+                new_week_group = self._calculate_week_group_from_latest(business_date)
+                
+                # Create new key with updated week group
+                new_key = (source, tenant_id, dataset_uuid, dataset_name, rule_code, new_week_group)
+                
+                # Initialize new metrics if needed
+                if new_key not in new_accumulator:
+                    start_date, end_date = self._get_week_boundaries_from_latest(new_week_group)
+                    new_accumulator[new_key] = AggregationMetrics(
+                        week_group=new_week_group,
+                        business_week_start_date=start_date,
+                        business_week_end_date=end_date
+                    )
+                
+                # Update metrics with row data
+                new_metrics = new_accumulator[new_key]
+                
+                # Update counts
+                if row_data["result_status"] == "Pass":
+                    new_metrics.pass_count += 1
+                elif row_data["result_status"] == "Fail":
+                    new_metrics.fail_count += 1
+                elif row_data["result_status"] == "Warning":
+                    new_metrics.warning_count += 1
+                
+                # Update latest values
+                if new_metrics.business_date_latest is None or business_date >= new_metrics.business_date_latest:
+                    new_metrics.business_date_latest = business_date
+                    new_metrics.dataset_record_count_latest = row_data["dataset_record_count"]
+                    new_metrics.filtered_record_count_latest = row_data["filtered_record_count"]
+                    new_metrics.last_execution_level = row_data["level_of_execution"]
+                
+                # Accumulate totals
+                new_metrics.dataset_record_count_total += row_data["dataset_record_count"]
+                new_metrics.filtered_record_count_total += row_data["filtered_record_count"]
+                
+                # Store row data
+                new_metrics.row_data.append(row_data)
+        
+        # Replace old accumulator with new one
+        self.accumulator = new_accumulator
+        logger.info(f"Recalculated {len(self.accumulator)} week groups")
+
+    def _get_week_boundaries_from_latest(self, week_group: int) -> Tuple[date, date]:
+        """
+        Get start and end dates for a week group counting from latest date.
+        
+        Args:
+            week_group: Week group number (0 = most recent)
+            
+        Returns:
+            Tuple of (start_date, end_date) for the week group
+        """
+        if self.latest_business_date is None:
+            raise ValueError("Cannot calculate week boundaries without latest date")
+            
+        # Calculate end date (working backward from latest)
+        # Week group 0 ends on the Sunday containing or after latest date
+        latest_weekday = self.latest_business_date.weekday()
+        days_to_sunday = (6 - latest_weekday) % 7
+        
+        # End date of week group 0
+        week_0_end_date = self.latest_business_date + timedelta(days=days_to_sunday)
+        
+        # Calculate this group's end date
+        weeks_back = week_group * self.weeks
+        end_date = week_0_end_date - timedelta(weeks=weeks_back)
+        
+        # Start date is (N*7 - 1) days before end date
+        start_date = end_date - timedelta(days=(self.weeks * 7) - 1)
+        
+        return start_date, end_date
+
     def _set_previous_period_fail_rates(self):
         """
         Set previous period fail rates for trend calculation.
@@ -349,15 +468,18 @@ class StreamingAggregator:
         
         # For each base key group, sort by week_group and set previous fail rates
         for base_key, keys in base_key_groups.items():
-            # Sort keys by week_group
+            # Sort keys by week_group (ascending: 0 is most recent, higher numbers are older)
             sorted_keys = sorted(keys, key=lambda k: k[5])  # k[5] is week_group
             
             # Set previous period fail rates
-            for i, key in enumerate(sorted_keys):
-                if i > 0:  # Not the first period
-                    prev_key = sorted_keys[i-1]
+            # With backward counting: lower week_group = more recent, so previous period has higher week_group
+            for i in range(len(sorted_keys)):
+                if i < len(sorted_keys) - 1:  # Not the last (oldest) period
+                    current_key = sorted_keys[i]
+                    # Previous period is the next one in sorted order (higher week_group = older)
+                    prev_key = sorted_keys[i+1]
                     prev_metrics = self.accumulator[prev_key]
-                    current_metrics = self.accumulator[key]
+                    current_metrics = self.accumulator[current_key]
                     current_metrics.previous_period_fail_rate = prev_metrics.fail_rate
 
     def finalize_aggregation(self):
@@ -374,6 +496,9 @@ class StreamingAggregator:
         logger.info(
             f"Finalizing aggregation with date range: {self.earliest_business_date} to {self.latest_business_date}"
         )
+
+        # Recalculate week groups based on latest date (counting backward)
+        self._recalculate_week_groups()
 
         # Calculate fail rates for each period
         for key, metrics in self.accumulator.items():
