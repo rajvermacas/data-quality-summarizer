@@ -629,3 +629,53 @@ class TestWeeklyGrouping:
                 key = ("test_system", "tenant_123", f"uuid-{dataset_idx}", f"Dataset {dataset_idx}", 101, week)
                 assert key in aggregator.accumulator
                 assert aggregator.accumulator[key].pass_count == 1
+
+    def test_week_boundary_durations(self):
+        """Test that week group boundaries have correct durations regardless of group number"""
+        from datetime import timedelta
+        
+        # Test different week groupings
+        for weeks in [1, 2, 4]:
+            aggregator = StreamingAggregator(weeks=weeks)
+            
+            # Create data spanning multiple week groups
+            base_date = date(2024, 1, 15)  # Monday
+            
+            # Add data across 6 weeks to create multiple groups
+            for week_offset in range(6):
+                for day in range(2):  # 2 entries per week
+                    row = pd.Series({
+                        "source": "test_system",
+                        "tenant_id": "tenant_123",
+                        "dataset_uuid": "uuid-456",
+                        "dataset_name": "Test Dataset",
+                        "rule_code": 101,
+                        "business_date": str(base_date + timedelta(weeks=week_offset, days=day)),
+                        "results": '{"result": "Pass"}',
+                        "dataset_record_count": 1000,
+                        "filtered_record_count": 950,
+                        "level_of_execution": "DATASET",
+                    })
+                    aggregator.process_row(row)
+            
+            # Verify week boundaries for each group
+            expected_groups = 6 // weeks if 6 % weeks == 0 else (6 // weeks) + 1
+            
+            for week_group in range(expected_groups):
+                start_date, end_date = aggregator._get_week_boundaries(week_group)
+                
+                # Calculate actual duration
+                duration_days = (end_date - start_date).days + 1  # +1 for inclusive
+                expected_duration = weeks * 7
+                
+                assert duration_days == expected_duration, (
+                    f"Week group {week_group} with {weeks}-week grouping has "
+                    f"{duration_days} days, expected {expected_duration} days. "
+                    f"Start: {start_date}, End: {end_date}"
+                )
+                
+                # Verify start date is always Monday
+                assert start_date.weekday() == 0, f"Start date {start_date} is not Monday"
+                
+                # Verify end date is always Sunday
+                assert end_date.weekday() == 6, f"End date {end_date} is not Sunday"

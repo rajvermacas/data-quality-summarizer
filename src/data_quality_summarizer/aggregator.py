@@ -161,8 +161,7 @@ class StreamingAggregator:
         start_date = start_date - timedelta(days=days_since_monday)
         
         # Calculate end date (Sunday of end week)
-        end_week = start_week + self.weeks - 1
-        end_date = start_date + timedelta(days=(end_week * 7) + 6)
+        end_date = start_date + timedelta(days=(self.weeks * 7) - 1)
         
         return start_date, end_date
 
